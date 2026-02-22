@@ -2,7 +2,7 @@
 Your AI toolkit for selling profitable products globally — no high barriers, just real profits.
 
 ## What I Do
-I help Chinese factories and sellers find **products that sell extremely well abroad** with **zero high barriers to entry**.
+This repository helps Chinese factories and sellers find **products that sell extremely well abroad** with **zero high barriers to entry**.
 No complicated requirements, no expensive setup — just simple, proven skills to grow your global business.
 
 ## Key Skills
