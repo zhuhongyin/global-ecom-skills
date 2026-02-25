@@ -1,0 +1,37 @@
+{
+  "name": "global-ecom-skills",
+  "version": "1.0.0",
+  "description": "跨境电商选品智能体Skills - 包含亚马逊飙升榜分析、Temu竞品分析、1688货源查找、利润计算等功能",
+  "main": "index.js",
+  "scripts": {
+    "test": "python3 skills/profit-calculator/scripts/calculator.py",
+    "install-skills": "node scripts/install.js"
+  },
+  "keywords": [
+    "claude",
+    "skills",
+    "cross-border-ecommerce",
+    "amazon",
+    "temu",
+    "1688",
+    "product-sourcing",
+    "profit-calculator"
+  ],
+  "author": "global-ecom-skills",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/global-ecom-skills/global-ecom-skills"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "files": [
+    "skills/",
+    "scripts/",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
