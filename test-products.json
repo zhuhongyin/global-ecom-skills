@@ -1,0 +1,9 @@
+{
+  "products": [
+    {"name": "升降桌转换器", "temu_price": 29.99, "currency": "USD", "ali1688_price": 85},
+    {"name": "桌垫", "temu_price": 8.99, "currency": "USD", "ali1688_price": 15},
+    {"name": "显示器支架", "temu_price": 24.99, "currency": "USD", "ali1688_price": 45},
+    {"name": "键盘托", "temu_price": 15.99, "currency": "USD", "ali1688_price": 35},
+    {"name": "理线盒", "temu_price": 6.99, "currency": "USD", "ali1688_price": 12}
+  ]
+}
