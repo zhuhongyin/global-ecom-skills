@@ -28,12 +28,99 @@ npx global-ecom-skills install
 npx skills add global-ecom-skills/global-ecom-skills
 ```
 
-### 方式三：手动安装
+### 方式三：手动安装（推荐用于测试）
 
 ```bash
-git clone https://github.com/global-ecom-skills/global-ecom-skills.git
+# 克隆仓库
+git clone https://github.com/zhuhongyin/global-ecom-skills.git
 cd global-ecom-skills
-node scripts/install.js
+
+# 复制skills到项目目录
+mkdir -p .claude/skills
+cp -r skills/* .claude/skills/
+
+# 验证安装
+ls -la .claude/skills/
+```
+
+## 🧪 测试方法
+
+### 测试1：验证Skills安装
+
+```bash
+# 查看已安装的skills
+ls -la .claude/skills/
+
+# 应该看到以下6个目录：
+# - amazon-trend-analyzer
+# - temu-competitor-analyzer
+# - supply-platform-analyzer
+# - sourcing-1688
+# - profit-calculator
+# - product-recommender
+```
+
+### 测试2：测试Profit Calculator
+
+```bash
+# 运行利润计算器
+python3 .claude/skills/profit-calculator/scripts/calculator.py
+```
+
+**预期输出**：
+```json
+{
+  "input": {
+    "temu_price": 12.99,
+    "price_1688": 25.0
+  },
+  "result": {
+    "net_profit": 13.59,
+    "profit_rate": 47.7,
+    "verdict": "✅ GO"
+  }
+}
+```
+
+**判定**: 良好利润空间，推荐上架
+
+### 测试3：测试Product Recommender
+
+```bash
+# 运行选品推荐器
+python3 .claude/skills/product-recommender/scripts/recommender.py
+```
+
+**预期输出**：
+```
+推荐产品数: 2
+平均利润: ¥11.045
+
+产品1: 桌垫 Desk Mat
+- 综合评分: 95分
+- 净利润: ¥13.59
+- 判定: ✅ 推荐上架
+
+产品2: 显示器支架 Monitor Stand
+- 综合评分: 75分
+- 净利润: ¥8.5
+- 判定: ✅ 推荐上架
+```
+
+### 测试4：在Claude Code中调用
+
+重启Claude Code后，可以直接使用自然语言调用：
+
+```
+使用profit-calculator计算产品利润：Temu卷王价$12.99，1688拿货价¥25
+```
+
+```
+使用product-recommender推荐适合上架的产品
+```
+
+```
+使用amazon-trend-analyzer分析亚马逊飙升榜
 ```
 
 ## 📖 使用方法
@@ -103,3 +190,10 @@ MIT License
 ## 🤝 贡献
 
 欢迎提交Issue和Pull Request！
+
+
+
+统一验收标准：
+交付验收材料-1：（为方便，人选可自己创建一个Public Repo Github，可以先不用加入乐歌企业的Github Repo，代码提交到个人的Repo，提交个人 github repo 及分支）skills 提交到 github 仓库“https://github.com/global-ecom-skills/global-ecom-skills”，自己新建分支，分支名称为“skills名称-zhonghongyin”，先别push到main分支，你自己先起一个branch名字，等该skill被测试能符合企业级实用后，再push到main分支；
+交付验收材料-2：skills 做成可通过行命令安装到 claude code 的skills，一行命令安装这些skill，https://skills.sh/,类似“find_skills”这个skill可以通过“npx skills add GitHub - vercel-labs/skills: The open agent skills tool - npx skills --skill find-skills”；
+交付验收材料-3：交付自己开发的作业涉及需求的完整产品的视频录屏，把skills的测试演示、完整产品的前端、后端等测试使用演示；
