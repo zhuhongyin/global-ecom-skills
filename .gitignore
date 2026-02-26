@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+ENV/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test outputs
+test-output/
+*.test.json
+
+# Temporary files
+tmp/
+temp/
+*.tmp
