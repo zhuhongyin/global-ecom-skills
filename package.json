@@ -1,0 +1,30 @@
+{
+  "name": "global-ecom-skills",
+  "version": "1.0.0",
+  "description": "跨境电商选品智能体 Skills 集合 - 用于 Claude Code 等 AI 编程助手",
+  "main": "index.js",
+  "scripts": {
+    "test": "python skills/temu-pricing-calculator/scripts/calculate_pricing.py --temu-price 12.99 --currency USD --ali1688-price 25.00"
+  },
+  "keywords": [
+    "claude-code",
+    "skills",
+    "agent-skills",
+    "e-commerce",
+    "temu",
+    "amazon",
+    "1688",
+    "cross-border",
+    "product-sourcing"
+  ],
+  "author": "zhuhongyin",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zhuhongyin/global-ecom-skills.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zhuhongyin/global-ecom-skills/issues"
+  },
+  "homepage": "https://github.com/zhuhongyin/global-ecom-skills#readme"
+}
