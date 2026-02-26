@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 """
 Amazon Movers & Shakers Data Scraper
-Fetch trending products from Amazon's Movers & Shakers list
+支持多种数据源：卖家精灵 API、真实爬取、Mock 数据
 
 Usage:
-    python scrape_amazon.py --category home-garden --limit 20
-    python scrape_amazon.py --search "standing desk" --limit 10
+    # 使用卖家精灵 API（推荐）
+    python scrape_amazon.py --source sellersprite --keyword "standing desk" --api-key YOUR_KEY
+    
+    # 真实爬取
+    python scrape_amazon.py --source scrape --category home-garden --limit 20
+    
+    # Mock 数据
+    python scrape_amazon.py --source mock --category home-garden --limit 20
 """
 
 import argparse
@@ -14,6 +20,7 @@ import re
 import sys
 import time
 import random
+import os
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from typing import List, Optional
@@ -21,18 +28,26 @@ from urllib.parse import quote_plus, urljoin
 
 try:
     import requests
-    from bs4 import BeautifulSoup
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
-    print("Warning: requests/beautifulsoup4 not installed, will use mock data")
+    print("Warning: requests not installed, some features unavailable")
 
+try:
+    from bs4 import BeautifulSoup
+    HAS_BS4 = True
+except ImportError:
+    HAS_BS4 = False
+
+
+SELLERSPRITE_API_BASE = "https://api.sellersprite.com/v1"
+SELLERSPRITE_MCP_BASE = "https://mcp.sellersprite.com"
 
 AMAZON_SITES = {
-    "us": "https://www.amazon.com",
-    "uk": "https://www.amazon.co.uk",
-    "de": "https://www.amazon.de",
-    "jp": "https://www.amazon.co.jp",
+    "us": {"domain": "amazon.com", "marketplace": "US"},
+    "uk": {"domain": "amazon.co.uk", "marketplace": "UK"},
+    "de": {"domain": "amazon.de", "marketplace": "DE"},
+    "jp": {"domain": "amazon.co.jp", "marketplace": "JP"},
 }
 
 CATEGORY_URLS = {
@@ -40,36 +55,11 @@ CATEGORY_URLS = {
     "electronics": "/Best-Sellers-Electronics/zgbs/electronics",
     "sports": "/Best-Sellers-Sports-Outdoors/zgbs/sporting-goods",
     "office": "/Best-Sellers-Office-Products/zgbs/office-products",
-    "toys": "/Best-Sellers-Toys-Games/zgbs/toys-and-games",
-    "health": "/Best-Sellers-Health-Personal-Care/zgbs/hpc",
-    "beauty": "/Best-Sellers-Beauty-Personal-Care/zgbs/beauty",
-    "pet-supplies": "/Best-Sellers-Pet-Supplies/zgbs/pet-supplies",
-    "automotive": "/Best-Sellers-Automotive/zgbs/automotive",
-    "garden": "/Best-Sellers-Patio-Lawn-Garden/zgbs/hi",
 }
-
-EXCLUDED_BRANDS = [
-    "Amazon Basics",
-    "AmazonBasics",
-    "Apple",
-    "Samsung",
-    "Sony",
-    "LG",
-]
-
-HIGH_COMPLIANCE_CATEGORIES = [
-    "medical",
-    "baby food",
-    "infant",
-    "pharmaceutical",
-    "supplement",
-]
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
 ]
 
 
@@ -90,297 +80,182 @@ class AmazonProduct:
     category_path: str
     suitable_for_temu: bool
     exclusion_reason: Optional[str]
+    monthly_sales: Optional[int] = None
+    monthly_revenue: Optional[float] = None
+    search_volume: Optional[int] = None
+
+
+class SellerSpriteAPI:
+    """卖家精灵 API 客户端"""
+    
+    def __init__(self, api_key: str = None):
+        self.api_key = api_key or os.environ.get("SELLERSPRITE_API_KEY", "")
+        self.base_url = SELLERSPRITE_API_BASE
+        self.session = requests.Session() if HAS_REQUESTS else None
+        
+        if self.session:
+            self.session.headers.update({
+                "secret-key": self.api_key,
+                "Content-Type": "application/json",
+            })
+    
+    def _request(self, endpoint: str, params: dict = None) -> dict:
+        if not HAS_REQUESTS or not self.api_key:
+            return {"code": "ERROR", "message": "API key required or requests not installed"}
+        
+        url = f"{self.base_url}{endpoint}"
+        try:
+            response = self.session.get(url, params=params, timeout=30)
+            return response.json()
+        except Exception as e:
+            return {"code": "ERROR", "message": str(e)}
+    
+    def get_keyword_traffic(self, asin: str, marketplace: str = "US") -> dict:
+        """获取关键词流量数据"""
+        endpoint = f"/traffic/keyword/stat/{marketplace}/{asin}/"
+        return self._request(endpoint)
+    
+    def get_product_info(self, asin: str, marketplace: str = "US") -> dict:
+        """获取产品信息"""
+        endpoint = f"/product/info/{marketplace}/{asin}/"
+        return self._request(endpoint)
+    
+    def get_bestsellers(self, category_id: str, marketplace: str = "US", limit: int = 100) -> dict:
+        """获取类目热销榜"""
+        endpoint = f"/bestsellers/{marketplace}/{category_id}/"
+        params = {"limit": limit}
+        return self._request(endpoint, params)
+    
+    def search_products(self, keyword: str, marketplace: str = "US", page: int = 1) -> dict:
+        """搜索产品"""
+        endpoint = f"/search/{marketplace}/"
+        params = {"keyword": keyword, "page": page}
+        return self._request(endpoint, params)
+    
+    def get_market_trends(self, category_id: str, marketplace: str = "US") -> dict:
+        """获取市场趋势"""
+        endpoint = f"/market/trends/{marketplace}/{category_id}/"
+        return self._request(endpoint)
 
 
 class AmazonMoversShakersScraper:
     
-    def __init__(self, site: str = "us"):
+    def __init__(self, site: str = "us", sellersprite_key: str = None):
         self.site = site
-        self.base_url = AMAZON_SITES.get(site, AMAZON_SITES["us"])
+        self.site_info = AMAZON_SITES.get(site, AMAZON_SITES["us"])
+        self.base_url = f"https://www.{self.site_info['domain']}"
+        self.marketplace = self.site_info["marketplace"]
+        
+        self.sellersprite = None
+        if sellersprite_key or os.environ.get("SELLERSPRITE_API_KEY"):
+            self.sellersprite = SellerSpriteAPI(sellersprite_key)
+        
         self.session = None
         if HAS_REQUESTS:
             self.session = requests.Session()
             self.session.headers.update({
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 "Accept-Language": "en-US,en;q=0.5",
-                "Accept-Encoding": "gzip, deflate, br",
-                "Connection": "keep-alive",
-                "Upgrade-Insecure-Requests": "1",
             })
     
     def _get_headers(self) -> dict:
-        return {
-            "User-Agent": random.choice(USER_AGENTS),
-            "Referer": self.base_url,
-        }
+        return {"User-Agent": random.choice(USER_AGENTS)}
     
-    def _fetch_page(self, url: str, retries: int = 3) -> Optional[str]:
-        if not HAS_REQUESTS or not self.session:
-            return None
+    def fetch_sellersprite_data(self, keyword: str = None, category_id: str = None, limit: int = 20) -> List[AmazonProduct]:
+        """使用卖家精灵 API 获取数据"""
+        if not self.sellersprite:
+            print("卖家精灵 API key 未配置，回退到其他数据源")
+            return []
         
-        for attempt in range(retries):
-            try:
-                time.sleep(random.uniform(1, 3))
-                response = self.session.get(
-                    url,
-                    headers=self._get_headers(),
-                    timeout=30,
-                    allow_redirects=True
-                )
-                
-                if response.status_code == 200:
-                    return response.text
-                elif response.status_code == 503:
-                    print(f"Amazon returned 503, retrying... ({attempt + 1}/{retries})")
-                    time.sleep(random.uniform(3, 6))
-                elif response.status_code == 404:
-                    print(f"Page not found: {url}")
-                    return None
-                else:
-                    print(f"HTTP {response.status_code} for {url}")
-                    
-            except requests.exceptions.RequestException as e:
-                print(f"Request failed: {e}, retrying... ({attempt + 1}/{retries})")
-                time.sleep(random.uniform(2, 5))
+        products = []
         
-        return None
+        if keyword:
+            result = self.sellersprite.search_products(keyword, self.marketplace)
+            if result.get("code") == "OK":
+                data = result.get("data", {}).get("products", [])
+                for i, item in enumerate(data[:limit]):
+                    product = self._parse_sellersprite_product(item, i + 1)
+                    if product:
+                        products.append(product)
+        
+        elif category_id:
+            result = self.sellersprite.get_bestsellers(category_id, self.marketplace, limit)
+            if result.get("code") == "OK":
+                data = result.get("data", {}).get("products", [])
+                for i, item in enumerate(data[:limit]):
+                    product = self._parse_sellersprite_product(item, i + 1)
+                    if product:
+                        products.append(product)
+        
+        return products
     
-    def get_movers_shakers_url(self, category: str = None) -> str:
-        if category and category in CATEGORY_URLS:
-            return urljoin(self.base_url, CATEGORY_URLS[category])
-        return urljoin(self.base_url, "/Best-Sellers/zgbs")
-    
-    def get_search_url(self, keyword: str) -> str:
-        encoded_keyword = quote_plus(keyword)
-        return f"{self.base_url}/s?k={encoded_keyword}&s=exact-aware-popularity-rank"
-    
-    def parse_price(self, price_text: str) -> tuple:
-        if not price_text:
-            return None, "", "USD"
-        
-        price_text = price_text.strip()
-        
-        patterns = [
-            (r'\$([\d,]+\.?\d*)', 'USD'),
-            (r'£([\d,]+\.?\d*)', 'GBP'),
-            (r'€([\d,]+\.?\d*)', 'EUR'),
-            (r'¥([\d,]+\.?\d*)', 'JPY'),
-        ]
-        
-        for pattern, currency in patterns:
-            match = re.search(pattern, price_text)
-            if match:
-                price_str = match.group(1).replace(',', '')
-                try:
-                    return float(price_str), price_text, currency
-                except ValueError:
-                    pass
-        
-        return None, price_text, "USD"
-    
-    def parse_rating(self, rating_text: str) -> Optional[float]:
-        if not rating_text:
-            return None
-        
-        match = re.search(r'([\d.]+)\s*(?:out of|von|sur)\s*5', rating_text)
-        if match:
-            try:
-                return float(match.group(1))
-            except ValueError:
-                pass
-        return None
-    
-    def parse_review_count(self, count_text: str) -> Optional[int]:
-        if not count_text:
-            return None
-        
-        count_text = count_text.replace(',', '').replace('.', '')
-        match = re.search(r'(\d+)', count_text)
-        if match:
-            try:
-                return int(match.group(1))
-            except ValueError:
-                pass
-        return None
-    
-    def parse_rank_change(self, change_text: str) -> str:
-        if not change_text:
-            return "+0"
-        
-        if 'up' in change_text.lower() or 'risen' in change_text.lower():
-            match = re.search(r'(\d+)', change_text)
-            if match:
-                return f"+{match.group(1)}"
-        elif 'down' in change_text.lower():
-            match = re.search(r'(\d+)', change_text)
-            if match:
-                return f"-{match.group(1)}"
-        
-        return "+0"
-    
-    def is_suitable_for_temu(self, product: dict) -> tuple:
-        title = product.get('title', '').lower()
-        category = product.get('category_path', '').lower()
-        brand = product.get('brand', '').lower()
-        price = product.get('price')
-        
-        for excluded_brand in EXCLUDED_BRANDS:
-            if excluded_brand.lower() in brand:
-                return False, f"品牌垄断: {excluded_brand}"
-        
-        for excluded_cat in HIGH_COMPLIANCE_CATEGORIES:
-            if excluded_cat in category or excluded_cat in title:
-                return False, f"高资质门槛: {excluded_cat}"
-        
-        if price and price < 5:
-            return False, "价格过低，利润空间不足"
-        
-        return True, None
-    
-    def _parse_product_card(self, card, rank: int) -> Optional[AmazonProduct]:
+    def _parse_sellersprite_product(self, item: dict, rank: int) -> Optional[AmazonProduct]:
+        """解析卖家精灵 API 返回的产品数据"""
         try:
-            asins = None
-            link = card.find('a', href=True)
-            if link:
-                href = link['href']
-                match = re.search(r'/dp/([A-Z0-9]{10})', href)
-                if match:
-                    asins = match.group(1)
+            asin = item.get("asin", "")
+            title = item.get("title", "")
+            price = item.get("price", 0)
+            rating = item.get("rating", 0)
+            review_count = item.get("review_count", 0)
+            monthly_sales = item.get("monthly_sales")
+            monthly_revenue = item.get("monthly_revenue")
+            rank_change = item.get("rank_change", "+0")
             
-            if not asins:
-                asins_elem = card.get('data-asin') or card.get('id', '')
-                if asins_elem and len(asins_elem) == 10:
-                    asins = asins_elem
-                else:
-                    return None
-            
-            title = ""
-            title_elem = (
-                card.find('span', class_='a-size-base-plus') or
-                card.find('span', class_='a-size-medium') or
-                card.find('h2') or
-                card.find('a', class_='a-link-normal')
-            )
-            if title_elem:
-                title = title_elem.get_text(strip=True)
-            
-            if not title:
-                title = f"Amazon Product {asins}"
-            
-            url = f"{self.base_url}/dp/{asins}"
-            
-            image_url = ""
-            img = card.find('img')
-            if img:
-                image_url = img.get('src', '') or img.get('data-src', '')
-            
-            price = None
-            price_display = ""
-            currency = "USD"
-            
-            price_elem = (
-                card.find('span', class_='a-price') or
-                card.find('span', class_='p13n-sc-price') or
-                card.find('span', class_='a-color-price')
-            )
-            if price_elem:
-                price_text = price_elem.get_text(strip=True)
-                price, price_display, currency = self.parse_price(price_text)
-            
-            rating = None
-            rating_elem = card.find('span', class_='a-icon-alt')
-            if rating_elem:
-                rating = self.parse_rating(rating_elem.get_text(strip=True))
-            
-            review_count = None
-            review_elem = (
-                card.find('span', class_='a-size-base') or
-                card.find('a', class_='a-size-small')
-            )
-            if review_elem:
-                review_text = review_elem.get_text(strip=True)
-                if re.search(r'\d', review_text):
-                    review_count = self.parse_review_count(review_text)
-            
-            rank_change = "+0"
-            change_elem = card.find('span', class_='zg-bdg-up') or card.find('span', class_='zg-bdg-down')
-            if change_elem:
-                rank_change = self.parse_rank_change(change_elem.get_text(strip=True))
-            
-            prime = bool(card.find('i', class_='a-icon-prime'))
-            
-            category_path = ""
-            cat_elem = card.find('span', class_='a-size-small')
-            if cat_elem:
-                category_path = cat_elem.get_text(strip=True)
-            
-            suitable, reason = self.is_suitable_for_temu({
-                'title': title,
-                'category_path': category_path,
-                'brand': '',
-                'price': price
-            })
+            if not asin:
+                return None
             
             return AmazonProduct(
-                asins=asins,
+                asins=asin,
                 title=title,
-                url=url,
-                image_url=image_url,
+                url=f"{self.base_url}/dp/{asin}",
+                image_url=item.get("image_url", ""),
                 price=price,
-                price_display=price_display,
-                currency=currency,
+                price_display=f"${price:.2f}" if price else "",
+                currency="USD",
                 rating=rating,
                 review_count=review_count,
                 rank=rank,
-                rank_change=rank_change,
-                prime=prime,
-                category_path=category_path,
-                suitable_for_temu=suitable,
-                exclusion_reason=reason
+                rank_change=f"+{rank_change}" if rank_change > 0 else str(rank_change),
+                prime=item.get("prime", False),
+                category_path=item.get("category", ""),
+                suitable_for_temu=True,
+                exclusion_reason=None,
+                monthly_sales=monthly_sales,
+                monthly_revenue=monthly_revenue,
+                search_volume=item.get("search_volume"),
             )
-            
         except Exception as e:
-            print(f"Error parsing product card: {e}")
+            print(f"解析卖家精灵数据失败: {e}")
             return None
     
     def scrape_real_data(self, category: str = None, limit: int = 20) -> List[AmazonProduct]:
-        if not HAS_REQUESTS:
-            print("requests/beautifulsoup4 not available, falling back to mock data")
+        """真实爬取亚马逊数据"""
+        if not HAS_REQUESTS or not HAS_BS4:
+            print("requests/beautifulsoup4 未安装，无法爬取")
             return []
         
-        url = self.get_movers_shakers_url(category)
-        print(f"Fetching: {url}")
+        if category and category in CATEGORY_URLS:
+            url = urljoin(self.base_url, CATEGORY_URLS[category])
+        else:
+            url = urljoin(self.base_url, "/Best-Sellers/zgbs")
         
-        html = self._fetch_page(url)
-        if not html:
-            print("Failed to fetch page, falling back to mock data")
-            return []
+        print(f"爬取: {url}")
         
         try:
-            soup = BeautifulSoup(html, 'html.parser')
+            time.sleep(random.uniform(1, 2))
+            response = self.session.get(url, headers=self._get_headers(), timeout=30)
+            
+            if response.status_code != 200:
+                print(f"HTTP {response.status_code}")
+                return []
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
             products = []
             
-            selectors = [
-                ('div', {'id': 'gridItemRoot'}),
-                ('div', {'class': 'zg-grid-general-faceout'}),
-                ('div', {'class': 'p13n-sc-uncoverable-faceout'}),
-                ('li', {'class': 'zg-item-immersion'}),
-                ('div', {'data-component-type': 's-search-result'}),
-            ]
-            
-            cards = []
-            for tag, attrs in selectors:
-                cards = soup.find_all(tag, attrs)
-                if cards:
-                    break
-            
-            if not cards:
-                cards = soup.find_all('div', class_=re.compile(r'(product|item|card)', re.I))
-            
-            print(f"Found {len(cards)} product cards")
+            cards = soup.find_all(['div', 'li'], class_=re.compile(r'(item|product|card)', re.I))
             
             for rank, card in enumerate(cards[:limit * 2], 1):
-                product = self._parse_product_card(card, rank)
+                product = self._parse_html_product(card, rank)
                 if product:
                     products.append(product)
                     if len(products) >= limit:
@@ -389,121 +264,89 @@ class AmazonMoversShakersScraper:
             return products
             
         except Exception as e:
-            print(f"Error parsing HTML: {e}")
+            print(f"爬取失败: {e}")
             return []
     
-    def scrape_search_results(self, keyword: str, limit: int = 20) -> List[AmazonProduct]:
-        if not HAS_REQUESTS:
-            return []
-        
-        url = self.get_search_url(keyword)
-        print(f"Searching: {url}")
-        
-        html = self._fetch_page(url)
-        if not html:
-            return []
-        
+    def _parse_html_product(self, card, rank: int) -> Optional[AmazonProduct]:
+        """解析 HTML 中的产品"""
         try:
-            soup = BeautifulSoup(html, 'html.parser')
-            products = []
+            asin = None
+            link = card.find('a', href=True)
+            if link:
+                match = re.search(r'/dp/([A-Z0-9]{10})', link['href'])
+                if match:
+                    asin = match.group(1)
             
-            cards = soup.find_all('div', {'data-component-type': 's-search-result'})
+            if not asin:
+                return None
             
-            for rank, card in enumerate(cards[:limit], 1):
-                product = self._parse_product_card(card, rank)
-                if product:
-                    products.append(product)
+            title = ""
+            title_elem = card.find(['span', 'h2', 'h3'], class_=re.compile(r'(title|name)', re.I))
+            if title_elem:
+                title = title_elem.get_text(strip=True)
             
-            return products
+            if not title:
+                title = f"Amazon Product {asin}"
             
-        except Exception as e:
-            print(f"Error parsing search results: {e}")
-            return []
+            price = None
+            price_elem = card.find(['span', 'div'], class_=re.compile(r'price', re.I))
+            if price_elem:
+                match = re.search(r'\$([\d.]+)', price_elem.get_text())
+                if match:
+                    price = float(match.group(1))
+            
+            rating = None
+            rating_elem = card.find(['span', 'i'], class_=re.compile(r'(rating|star)', re.I))
+            if rating_elem:
+                match = re.search(r'([\d.]+)', rating_elem.get_text())
+                if match:
+                    rating = float(match.group(1))
+            
+            return AmazonProduct(
+                asins=asin,
+                title=title,
+                url=f"{self.base_url}/dp/{asin}",
+                image_url="",
+                price=price,
+                price_display=f"${price:.2f}" if price else "",
+                currency="USD",
+                rating=rating,
+                review_count=None,
+                rank=rank,
+                rank_change="+0",
+                prime=False,
+                category_path="",
+                suitable_for_temu=True,
+                exclusion_reason=None,
+            )
+        except:
+            return None
     
     def generate_mock_data(self, category: str = "home-garden", limit: int = 20) -> List[AmazonProduct]:
+        """生成 Mock 数据"""
         mock_products = [
-            {
-                "title": "Standing Desk Converter, Height Adjustable Desk Riser",
-                "price": 89.99,
-                "rating": 4.5,
-                "review_count": 1256,
-                "rank_change": "+256",
-            },
-            {
-                "title": "Monitor Stand Riser with Storage, Desktop Organizer",
-                "price": 34.99,
-                "rating": 4.3,
-                "review_count": 892,
-                "rank_change": "+189",
-            },
-            {
-                "title": "Desk Mat Large, PU Leather Desk Protector Pad",
-                "price": 19.99,
-                "rating": 4.6,
-                "review_count": 2341,
-                "rank_change": "+145",
-            },
-            {
-                "title": "Cable Management Box, Desktop Cord Organizer",
-                "price": 24.99,
-                "rating": 4.4,
-                "review_count": 567,
-                "rank_change": "+98",
-            },
-            {
-                "title": "Keyboard Tray Under Desk, Ergonomic Keyboard Stand",
-                "price": 45.99,
-                "rating": 4.2,
-                "review_count": 423,
-                "rank_change": "+87",
-            },
-            {
-                "title": "Desk Shelf Organizer, Wooden Desktop Bookshelf",
-                "price": 39.99,
-                "rating": 4.7,
-                "review_count": 1567,
-                "rank_change": "+76",
-            },
-            {
-                "title": "Laptop Stand Adjustable, Aluminum Notebook Riser",
-                "price": 29.99,
-                "rating": 4.5,
-                "review_count": 3456,
-                "rank_change": "+65",
-            },
-            {
-                "title": "Desk Drawer Organizer, Under Desk Storage Cabinet",
-                "price": 54.99,
-                "rating": 4.1,
-                "review_count": 234,
-                "rank_change": "+54",
-            },
-            {
-                "title": "Foot Rest Under Desk, Ergonomic Office Footrest",
-                "price": 22.99,
-                "rating": 4.4,
-                "review_count": 876,
-                "rank_change": "+43",
-            },
-            {
-                "title": "Desk Lamp with USB Charging Port, LED Office Light",
-                "price": 32.99,
-                "rating": 4.6,
-                "review_count": 2134,
-                "rank_change": "+32",
-            },
+            {"title": "Standing Desk Converter, Height Adjustable", "price": 89.99, "rating": 4.5, "review_count": 1256, "rank_change": "+256", "monthly_sales": 850},
+            {"title": "Monitor Stand Riser with Storage", "price": 34.99, "rating": 4.3, "review_count": 892, "rank_change": "+189", "monthly_sales": 1200},
+            {"title": "Desk Mat Large, PU Leather Pad", "price": 19.99, "rating": 4.6, "review_count": 2341, "rank_change": "+145", "monthly_sales": 2500},
+            {"title": "Cable Management Box, Desktop Organizer", "price": 24.99, "rating": 4.4, "review_count": 567, "rank_change": "+98", "monthly_sales": 980},
+            {"title": "Keyboard Tray Under Desk, Ergonomic", "price": 45.99, "rating": 4.2, "review_count": 423, "rank_change": "+87", "monthly_sales": 650},
+            {"title": "Desk Shelf Organizer, Wooden Bookshelf", "price": 39.99, "rating": 4.7, "review_count": 1567, "rank_change": "+76", "monthly_sales": 890},
+            {"title": "Laptop Stand Adjustable, Aluminum Riser", "price": 29.99, "rating": 4.5, "review_count": 3456, "rank_change": "+65", "monthly_sales": 1800},
+            {"title": "Desk Drawer Organizer, Storage Cabinet", "price": 54.99, "rating": 4.1, "review_count": 234, "rank_change": "+54", "monthly_sales": 420},
+            {"title": "Foot Rest Under Desk, Ergonomic Footrest", "price": 22.99, "rating": 4.4, "review_count": 876, "rank_change": "+43", "monthly_sales": 1100},
+            {"title": "Desk Lamp with USB Charging Port, LED", "price": 32.99, "rating": 4.6, "review_count": 2134, "rank_change": "+32", "monthly_sales": 1500},
         ]
         
         products = []
         for i, mock in enumerate(mock_products[:limit]):
-            asins = f"B0MOCK{i:04d}XYZ"
-            product = AmazonProduct(
-                asins=asins,
+            asin = f"B0MOCK{i:04d}XYZ"
+            products.append(AmazonProduct(
+                asins=asin,
                 title=mock["title"],
-                url=f"{self.base_url}/dp/{asins}",
+                url=f"{self.base_url}/dp/{asin}",
                 image_url=f"https://m.media-amazon.com/images/I/mock{i}.jpg",
                 price=mock["price"],
-                price_display=f"${mock['price']}",
+                price_display=f"${mock['price']:.2f}",
                 currency="USD",
                 rating=mock["rating"],
                 review_count=mock["review_count"],
@@ -512,112 +355,109 @@ class AmazonMoversShakersScraper:
                 prime=True,
                 category_path="Home & Kitchen > Home Office Furniture",
                 suitable_for_temu=True,
-                exclusion_reason=None
-            )
-            
-            suitable, reason = self.is_suitable_for_temu({
-                'title': product.title,
-                'category_path': product.category_path,
-                'brand': '',
-                'price': product.price
-            })
-            product.suitable_for_temu = suitable
-            product.exclusion_reason = reason
-            
-            products.append(product)
+                exclusion_reason=None,
+                monthly_sales=mock.get("monthly_sales"),
+                monthly_revenue=mock.get("monthly_sales", 0) * mock["price"],
+            ))
         
         return products
+    
+    def fetch_data(self, source: str = "auto", keyword: str = None, category: str = None, 
+                   category_id: str = None, limit: int = 20) -> tuple:
+        """
+        获取数据的主方法
+        
+        Args:
+            source: 数据源 (sellersprite/scrape/mock/auto)
+            keyword: 搜索关键词
+            category: 类目名称
+            category_id: 卖家精灵类目ID
+            limit: 返回数量
+        
+        Returns:
+            (products, data_source)
+        """
+        products = []
+        data_source = "mock"
+        
+        if source == "sellersprite" or (source == "auto" and self.sellersprite):
+            print("尝试使用卖家精灵 API...")
+            products = self.fetch_sellersprite_data(keyword, category_id, limit)
+            if products:
+                data_source = "sellersprite"
+                return products, data_source
+            print("卖家精灵 API 无数据，尝试其他数据源...")
+        
+        if source in ["scrape", "auto"] and not products:
+            print("尝试真实爬取...")
+            products = self.scrape_real_data(category, limit)
+            if products:
+                data_source = "scrape"
+                return products, data_source
+            print("爬取失败，使用 Mock 数据...")
+        
+        print("使用 Mock 数据...")
+        products = self.generate_mock_data(category, limit)
+        data_source = "mock"
+        
+        return products, data_source
 
 
-def format_output(products: List[AmazonProduct], output_format: str = "json") -> str:
+def format_output(products: List[AmazonProduct], data_source: str, output_format: str = "json") -> str:
     if output_format == "json":
-        data = {
+        return json.dumps({
             "metadata": {
                 "site": "amazon.com",
-                "category": "Home & Kitchen",
                 "scrape_time": datetime.now().isoformat(),
                 "total_products": len(products),
-                "returned_products": len(products),
-                "data_source": "real" if any(p.asins and not p.asins.startswith("B0MOCK") for p in products) else "mock"
+                "data_source": data_source,
             },
             "products": [asdict(p) for p in products]
-        }
-        return json.dumps(data, ensure_ascii=False, indent=2)
+        }, ensure_ascii=False, indent=2)
     else:
-        lines = []
-        lines.append("=" * 60)
-        lines.append("亚马逊飙升榜产品列表")
-        lines.append("=" * 60)
+        lines = ["=" * 60, f"亚马逊产品列表 (数据源: {data_source})", "=" * 60]
         for p in products:
             status = "✅" if p.suitable_for_temu else "❌"
             lines.append(f"\n{p.rank}. {status} {p.title[:50]}...")
             lines.append(f"   ASIN: {p.asins}")
             lines.append(f"   价格: {p.price_display}")
             lines.append(f"   评分: {p.rating} ({p.review_count} 评论)")
-            lines.append(f"   排名变化: {p.rank_change}")
-            if p.exclusion_reason:
-                lines.append(f"   排除原因: {p.exclusion_reason}")
+            if p.monthly_sales:
+                lines.append(f"   月销量: {p.monthly_sales}")
         return "\n".join(lines)
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Amazon Movers & Shakers Data Scraper"
-    )
-    parser.add_argument(
-        "--category", type=str, default="home-garden",
-        choices=list(CATEGORY_URLS.keys()),
-        help="Product category to scrape"
-    )
-    parser.add_argument(
-        "--search", type=str,
-        help="Search keyword instead of category"
-    )
-    parser.add_argument(
-        "--site", type=str, default="us",
-        choices=list(AMAZON_SITES.keys()),
-        help="Amazon site region"
-    )
-    parser.add_argument(
-        "--limit", type=int, default=20,
-        help="Maximum number of products to return"
-    )
-    parser.add_argument(
-        "--output", type=str,
-        help="Output file path"
-    )
-    parser.add_argument(
-        "--format", type=str, default="json",
-        choices=["json", "text"],
-        help="Output format"
-    )
-    parser.add_argument(
-        "--mock", action="store_true",
-        help="Force use mock data"
-    )
+    parser = argparse.ArgumentParser(description="Amazon Movers & Shakers 数据获取")
+    
+    parser.add_argument("--source", choices=["sellersprite", "scrape", "mock", "auto"], 
+                       default="auto", help="数据源选择")
+    parser.add_argument("--api-key", help="卖家精灵 API Key")
+    parser.add_argument("--keyword", help="搜索关键词")
+    parser.add_argument("--category", default="home-garden", help="类目名称")
+    parser.add_argument("--category-id", help="卖家精灵类目ID")
+    parser.add_argument("--site", default="us", choices=list(AMAZON_SITES.keys()), help="站点")
+    parser.add_argument("--limit", type=int, default=20, help="返回数量")
+    parser.add_argument("--output", help="输出文件")
+    parser.add_argument("--format", choices=["json", "text"], default="json", help="输出格式")
     
     args = parser.parse_args()
     
-    scraper = AmazonMoversShakersScraper(site=args.site)
+    scraper = AmazonMoversShakersScraper(args.site, args.api_key)
+    products, data_source = scraper.fetch_data(
+        source=args.source,
+        keyword=args.keyword,
+        category=args.category,
+        category_id=args.category_id,
+        limit=args.limit
+    )
     
-    products = []
-    
-    if not args.mock:
-        if args.search:
-            products = scraper.scrape_search_results(args.search, args.limit)
-        else:
-            products = scraper.scrape_real_data(args.category, args.limit)
-    
-    if not products:
-        print("Using mock data as fallback...")
-        products = scraper.generate_mock_data(category=args.category, limit=args.limit)
-    
-    output = format_output(products, args.format)
+    output = format_output(products, data_source, args.format)
     
     if args.output:
         with open(args.output, 'w', encoding='utf-8') as f:
             f.write(output)
-        print(f"Results saved to {args.output}")
+        print(f"结果已保存到 {args.output}")
     else:
         print(output)
 
