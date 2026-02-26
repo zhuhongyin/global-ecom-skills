@@ -12,6 +12,9 @@ Usage:
     
     # Mock 数据
     python scrape_amazon.py --source mock --category home-garden --limit 20
+    
+    # 安装依赖
+    python scrape_amazon.py --install-deps
 """
 
 import argparse
@@ -21,23 +24,62 @@ import sys
 import time
 import random
 import os
+import subprocess
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from typing import List, Optional
 from urllib.parse import quote_plus, urljoin
 
+
+def install_dependencies():
+    """安装所需依赖"""
+    dependencies = ["requests", "beautifulsoup4"]
+    print("正在安装依赖...")
+    for dep in dependencies:
+        try:
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", dep, "--quiet"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+            print(f"  ✓ {dep}")
+        except subprocess.CalledProcessError:
+            print(f"  ✗ {dep} 安装失败")
+    print("依赖安装完成，请重新运行脚本")
+    sys.exit(0)
+
+
+def check_dependencies():
+    """检查依赖是否安装"""
+    missing = []
+    
+    try:
+        import requests
+    except ImportError:
+        missing.append("requests")
+    
+    try:
+        from bs4 import BeautifulSoup
+    except ImportError:
+        missing.append("beautifulsoup4")
+    
+    return missing
+
+
+HAS_REQUESTS = False
+HAS_BS4 = False
+
 try:
     import requests
     HAS_REQUESTS = True
 except ImportError:
-    HAS_REQUESTS = False
-    print("Warning: requests not installed, some features unavailable")
+    pass
 
 try:
     from bs4 import BeautifulSoup
     HAS_BS4 = True
 except ImportError:
-    HAS_BS4 = False
+    pass
 
 
 SELLERSPRITE_API_BASE = "https://api.sellersprite.com/v1"
@@ -440,8 +482,20 @@ def main():
     parser.add_argument("--limit", type=int, default=20, help="返回数量")
     parser.add_argument("--output", help="输出文件")
     parser.add_argument("--format", choices=["json", "text"], default="json", help="输出格式")
+    parser.add_argument("--install-deps", action="store_true", help="安装依赖并退出")
     
     args = parser.parse_args()
+    
+    if args.install_deps:
+        install_dependencies()
+        return
+    
+    missing_deps = check_dependencies()
+    if missing_deps and args.source != "mock":
+        print(f"缺少依赖: {', '.join(missing_deps)}")
+        print("提示: 运行 'python scrape_amazon.py --install-deps' 安装依赖")
+        print("或使用 --source mock 使用 Mock 数据")
+        print("")
     
     scraper = AmazonMoversShakersScraper(args.site, args.api_key)
     products, data_source = scraper.fetch_data(
