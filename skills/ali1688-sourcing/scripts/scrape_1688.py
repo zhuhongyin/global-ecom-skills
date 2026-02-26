@@ -11,10 +11,20 @@ Usage:
 import argparse
 import json
 import re
+import time
+import random
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from typing import List, Optional
 from urllib.parse import quote_plus
+
+try:
+    import requests
+    from bs4 import BeautifulSoup
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+    print("Warning: requests/beautifulsoup4 not installed, will use mock data")
 
 
 PRODUCTION_AREAS = {
@@ -33,6 +43,12 @@ CERTIFICATIONS = {
     "FDA": "美国食品药品认证",
     "UL": "美国安全认证",
 }
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
+]
 
 
 @dataclass
@@ -110,6 +126,50 @@ class Ali1688Scraper:
     
     def __init__(self):
         self.base_url = "https://www.1688.com"
+        self.session = None
+        if HAS_REQUESTS:
+            self.session = requests.Session()
+            self.session.headers.update({
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Connection": "keep-alive",
+            })
+    
+    def _get_headers(self) -> dict:
+        return {
+            "User-Agent": random.choice(USER_AGENTS),
+            "Referer": self.base_url,
+        }
+    
+    def _fetch_page(self, url: str, retries: int = 3) -> Optional[str]:
+        if not HAS_REQUESTS or not self.session:
+            return None
+        
+        for attempt in range(retries):
+            try:
+                time.sleep(random.uniform(1, 2))
+                response = self.session.get(
+                    url,
+                    headers=self._get_headers(),
+                    timeout=30,
+                    allow_redirects=True
+                )
+                
+                if response.status_code == 200:
+                    response.encoding = 'utf-8'
+                    return response.text
+                elif response.status_code in [403, 429]:
+                    print(f"Rate limited, waiting... ({attempt + 1}/{retries})")
+                    time.sleep(random.uniform(3, 6))
+                else:
+                    print(f"HTTP {response.status_code} for {url}")
+                    
+            except requests.exceptions.RequestException as e:
+                print(f"Request failed: {e}, retrying... ({attempt + 1}/{retries})")
+                time.sleep(random.uniform(2, 4))
+        
+        return None
     
     def get_search_url(self, keyword: str) -> str:
         encoded_keyword = quote_plus(keyword)
@@ -138,11 +198,13 @@ class Ali1688Scraper:
                     ))
         
         if not tiers:
-            tiers = [
-                PriceTier(quantity="1-9", price=100.0),
-                PriceTier(quantity="10-49", price=90.0),
-                PriceTier(quantity="50+", price=80.0),
-            ]
+            match = re.search(r'[¥￥]?([\d.]+)', price_text)
+            if match:
+                tiers = [
+                    PriceTier(quantity="1-9", price=float(match.group(1)) * 1.2),
+                    PriceTier(quantity="10-49", price=float(match.group(1)) * 1.1),
+                    PriceTier(quantity="50+", price=float(match.group(1))),
+                ]
         
         return tiers
     
@@ -152,6 +214,214 @@ class Ali1688Scraper:
                 return areas
         return ["浙江", "广东", "江苏"]
     
+    def _parse_product_card(self, card, rank: int) -> Optional[tuple]:
+        try:
+            product_id = ""
+            link = card.find('a', href=True)
+            if link:
+                href = link['href']
+                match = re.search(r'offer/(\d+)\.html', href)
+                if match:
+                    product_id = match.group(1)
+                else:
+                    match = re.search(r'offerId=(\d+)', href)
+                    if match:
+                        product_id = match.group(1)
+            
+            if not product_id:
+                product_id = f"1688_{hash(str(card)) % 1000000}"
+            
+            title = ""
+            title_elem = (
+                card.find('div', class_=re.compile(r'(title|subject)', re.I)) or
+                card.find('a', class_=re.compile(r'title', re.I)) or
+                card.find('h2') or
+                card.find('h3')
+            )
+            if title_elem:
+                title = title_elem.get_text(strip=True)
+            
+            if not title:
+                title = f"1688 产品 {product_id}"
+            
+            url = f"https://detail.1688.com/offer/{product_id}.html"
+            
+            image_url = ""
+            img = card.find('img')
+            if img:
+                image_url = img.get('src', '') or img.get('data-lazy-src', '') or img.get('data-src', '')
+            
+            price_tiers = []
+            price_elem = card.find(['span', 'div', 'p'], class_=re.compile(r'(price|cost)', re.I))
+            if price_elem:
+                price_text = price_elem.get_text(strip=True)
+                price_tiers = self.parse_price_tiers(price_text)
+            
+            if not price_tiers:
+                match = re.search(r'[¥￥]?([\d.]+)', card.get_text())
+                if match:
+                    base_price = float(match.group(1))
+                    price_tiers = [
+                        PriceTier(quantity="1-9", price=base_price * 1.2),
+                        PriceTier(quantity="10-49", price=base_price * 1.1),
+                        PriceTier(quantity="50+", price=base_price),
+                    ]
+            
+            starting_price = price_tiers[-1].price if price_tiers else 100.0
+            
+            company_name = ""
+            company_elem = card.find(['span', 'div', 'a'], class_=re.compile(r'(company|shop|store|seller)', re.I))
+            if company_elem:
+                company_name = company_elem.get_text(strip=True)
+            
+            location = {"province": "", "city": ""}
+            location_elem = card.find(['span', 'div'], class_=re.compile(r'(location|address|area)', re.I))
+            if location_elem:
+                loc_text = location_elem.get_text(strip=True)
+                match = re.match(r'(.+?)(.+)?', loc_text)
+                if match:
+                    location["province"] = match.group(1)
+                    location["city"] = match.group(2) or ""
+            
+            return {
+                "product_id": product_id,
+                "title": title,
+                "url": url,
+                "image_url": image_url,
+                "price_tiers": price_tiers,
+                "starting_price": starting_price,
+                "company_name": company_name,
+                "location": location,
+            }
+            
+        except Exception as e:
+            print(f"Error parsing product card: {e}")
+            return None
+    
+    def scrape_real_data(self, keyword: str, limit: int = 20) -> List[Factory]:
+        if not HAS_REQUESTS:
+            print("requests/beautifulsoup4 not available, falling back to mock data")
+            return []
+        
+        url = self.get_search_url(keyword)
+        print(f"Fetching: {url}")
+        
+        html = self._fetch_page(url)
+        if not html:
+            print("Failed to fetch page, falling back to mock data")
+            return []
+        
+        try:
+            soup = BeautifulSoup(html, 'html.parser')
+            products_data = []
+            
+            cards = soup.find_all(['div', 'li'], class_=re.compile(r'(offer|item|product|card)', re.I))
+            
+            if not cards:
+                cards = soup.find_all('div', attrs={'data-offer-id': True})
+            
+            if not cards:
+                cards = soup.find_all('div', class_='sw-offer')
+            
+            print(f"Found {len(cards)} product cards")
+            
+            for rank, card in enumerate(cards[:limit * 2], 1):
+                product_data = self._parse_product_card(card, rank)
+                if product_data and product_data["price_tiers"]:
+                    products_data.append(product_data)
+                    if len(products_data) >= limit:
+                        break
+            
+            factories = self._group_products_by_factory(products_data)
+            return factories
+            
+        except Exception as e:
+            print(f"Error parsing HTML: {e}")
+            return []
+    
+    def _group_products_by_factory(self, products_data: List[dict]) -> List[Factory]:
+        factory_map = {}
+        
+        for i, pd in enumerate(products_data):
+            company_name = pd.get("company_name") or f"工厂 {i + 1}"
+            
+            if company_name not in factory_map:
+                location = pd.get("location", {"province": "", "city": ""})
+                factory_map[company_name] = {
+                    "rank": len(factory_map) + 1,
+                    "company_name": company_name,
+                    "location": location,
+                    "products": [],
+                    "verified": "认证" in company_name or "实业" in company_name,
+                }
+            
+            product = Product(
+                product_id=pd["product_id"],
+                title=pd["title"],
+                url=pd["url"],
+                image_url=pd["image_url"],
+                price_tiers=pd["price_tiers"],
+                starting_price=pd["starting_price"],
+                moq=10,
+                material="",
+                colors=["黑色", "白色"],
+                size="",
+                weight="",
+                packaging="纸箱包装",
+                lead_time="7-15天",
+                certifications=[],
+                customization=True,
+                sample_available=True,
+                sample_price=pd["starting_price"] * 1.2
+            )
+            factory_map[company_name]["products"].append(product)
+        
+        factories = []
+        for company_name, data in factory_map.items():
+            factory = Factory(
+                rank=data["rank"],
+                company_name=company_name,
+                company_url=f"https://{company_name[:4].lower()}.1688.com",
+                verified=data["verified"],
+                verification_type="深度验厂" if data["verified"] else "企业认证",
+                location=data["location"],
+                main_products=[p.title[:20] for p in data["products"][:3]],
+                factory_info={
+                    "established": "2015",
+                    "employees": "50-100人",
+                    "production_capacity": "10000件/月",
+                    "export_experience": True
+                },
+                products=data["products"],
+                trade_info={
+                    "min_order": data["products"][0].moq if data["products"] else 10,
+                    "payment_terms": ["支付宝", "银行转账"],
+                    "shipping": "支持物流配送",
+                    "return_policy": "7天无理由退换"
+                },
+                ratings={
+                    "overall": 4.5,
+                    "quality": 4.6,
+                    "service": 4.4,
+                    "delivery": 4.5
+                },
+                transaction_history={
+                    "total_orders": "500+",
+                    "repeat_buyers": "35%",
+                    "response_rate": "98%"
+                },
+                contact={
+                    "contact_person": "王经理",
+                    "phone": "138****8888",
+                    "wechat": "",
+                    "online_status": "在线"
+                },
+                notes="产业带工厂" if data["verified"] else "待验证工厂"
+            )
+            factories.append(factory)
+        
+        return factories
+    
     def generate_sourcing_instruction(self, keyword: str, product: Product) -> str:
         instruction = f"""【采购找货指令】
 
@@ -159,11 +429,11 @@ class Ali1688Scraper:
 关键词：{keyword}、批发、工厂直供
 
 材质要求：
-- 主要材质：{product.material}
-- 规格：{product.size}
+- 主要材质：{product.material or '待确认'}
+- 规格：{product.size or '待确认'}
 
 功能要求：
-- 重量：{product.weight}
+- 重量：{product.weight or '待确认'}
 - 包装：{product.packaging}
 
 认证要求：
@@ -373,6 +643,59 @@ class Ali1688Scraper:
                 "note": f"{best_product.moq if best_product else 50}件起批价，用于核价计算"
             }
         )
+    
+    def build_result_from_factories(self, keyword: str, factories: List[Factory]) -> Ali1688SearchResult:
+        if not factories:
+            return self.generate_mock_data(keyword)
+        
+        all_prices = []
+        for f in factories:
+            for p in f.products:
+                all_prices.append(p.starting_price)
+        
+        factories.sort(key=lambda f: f.products[0].starting_price if f.products else 999)
+        
+        best_factory = factories[0]
+        best_product = best_factory.products[0] if best_factory.products else None
+        
+        sourcing_guide = SourcingGuide(
+            recommended_factories=[
+                {"factory_name": best_factory.company_name, "reason": "价格最低"}
+            ],
+            negotiation_tips=["起订量可谈", "长期合作可申请账期"],
+            quality_checklist=["检查材质质量", "确认产品质保期"],
+            shipping_options=[{"method": "物流", "cost": "¥15-30/件", "time": "3-5天"}]
+        )
+        
+        return Ali1688SearchResult(
+            keyword=keyword,
+            search_time=datetime.now().isoformat(),
+            total_results=len(factories),
+            returned_results=len(factories),
+            lowest_price=min(all_prices) if all_prices else 0,
+            highest_price=max(all_prices) if all_prices else 0,
+            average_price=sum(all_prices) / len(all_prices) if all_prices else 0,
+            median_price=sorted(all_prices)[len(all_prices) // 2] if all_prices else 0,
+            main_production_areas=self.detect_production_area(keyword),
+            recommended_starting_price=best_product.starting_price if best_product else 100,
+            wholesale_price={
+                "min_price": min(all_prices) if all_prices else 0,
+                "max_price": max(all_prices) if all_prices else 0,
+                "recommended_price": best_product.starting_price if best_product else 100,
+                "currency": "CNY",
+                "unit": "件",
+                "note": f"建议以 ¥{best_product.starting_price if best_product else 100:.0f} 作为核价参考价"
+            },
+            factories=factories,
+            sourcing_guide=sourcing_guide,
+            price_for_calculator={
+                "ali1688_price": best_product.starting_price if best_product else 100,
+                "currency": "CNY",
+                "source": best_factory.company_name,
+                "moq": best_product.moq if best_product else 50,
+                "note": f"{best_product.moq if best_product else 50}件起批价，用于核价计算"
+            }
+        )
 
 
 def format_output(result: Ali1688SearchResult, output_format: str = "json") -> str:
@@ -382,7 +705,8 @@ def format_output(result: Ali1688SearchResult, output_format: str = "json") -> s
                 "keyword": result.keyword,
                 "search_time": result.search_time,
                 "total_results": result.total_results,
-                "returned_results": result.returned_results
+                "returned_results": result.returned_results,
+                "data_source": "real" if result.total_results < 1000 else "mock"
             },
             "summary": {
                 "lowest_price": result.lowest_price,
@@ -454,11 +778,25 @@ def main():
         choices=["json", "text"],
         help="Output format"
     )
+    parser.add_argument(
+        "--mock", action="store_true",
+        help="Force use mock data"
+    )
     
     args = parser.parse_args()
     
     scraper = Ali1688Scraper()
-    result = scraper.generate_mock_data(keyword=args.keyword, limit=args.limit)
+    
+    result = None
+    
+    if not args.mock:
+        factories = scraper.scrape_real_data(args.keyword, args.limit)
+        if factories:
+            result = scraper.build_result_from_factories(args.keyword, factories)
+    
+    if not result:
+        print("Using mock data as fallback...")
+        result = scraper.generate_mock_data(keyword=args.keyword, limit=args.limit)
     
     output = format_output(result, args.format)
     

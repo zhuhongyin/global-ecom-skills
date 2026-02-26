@@ -12,10 +12,20 @@ import argparse
 import json
 import re
 import sys
+import time
+import random
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from typing import List, Optional
 from urllib.parse import quote_plus, urljoin
+
+try:
+    import requests
+    from bs4 import BeautifulSoup
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+    print("Warning: requests/beautifulsoup4 not installed, will use mock data")
 
 
 AMAZON_SITES = {
@@ -55,6 +65,13 @@ HIGH_COMPLIANCE_CATEGORIES = [
     "supplement",
 ]
 
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
+]
+
 
 @dataclass
 class AmazonProduct:
@@ -80,6 +97,53 @@ class AmazonMoversShakersScraper:
     def __init__(self, site: str = "us"):
         self.site = site
         self.base_url = AMAZON_SITES.get(site, AMAZON_SITES["us"])
+        self.session = None
+        if HAS_REQUESTS:
+            self.session = requests.Session()
+            self.session.headers.update({
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.5",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Connection": "keep-alive",
+                "Upgrade-Insecure-Requests": "1",
+            })
+    
+    def _get_headers(self) -> dict:
+        return {
+            "User-Agent": random.choice(USER_AGENTS),
+            "Referer": self.base_url,
+        }
+    
+    def _fetch_page(self, url: str, retries: int = 3) -> Optional[str]:
+        if not HAS_REQUESTS or not self.session:
+            return None
+        
+        for attempt in range(retries):
+            try:
+                time.sleep(random.uniform(1, 3))
+                response = self.session.get(
+                    url,
+                    headers=self._get_headers(),
+                    timeout=30,
+                    allow_redirects=True
+                )
+                
+                if response.status_code == 200:
+                    return response.text
+                elif response.status_code == 503:
+                    print(f"Amazon returned 503, retrying... ({attempt + 1}/{retries})")
+                    time.sleep(random.uniform(3, 6))
+                elif response.status_code == 404:
+                    print(f"Page not found: {url}")
+                    return None
+                else:
+                    print(f"HTTP {response.status_code} for {url}")
+                    
+            except requests.exceptions.RequestException as e:
+                print(f"Request failed: {e}, retrying... ({attempt + 1}/{retries})")
+                time.sleep(random.uniform(2, 5))
+        
+        return None
     
     def get_movers_shakers_url(self, category: str = None) -> str:
         if category and category in CATEGORY_URLS:
@@ -173,34 +237,188 @@ class AmazonMoversShakersScraper:
         
         return True, None
     
-    def parse_html_products(self, html_content: str, limit: int = 20) -> List[AmazonProduct]:
-        products = []
-        
-        asin_pattern = r'/dp/([A-Z0-9]{10})'
-        asins = re.findall(asin_pattern, html_content)
-        unique_asins = list(dict.fromkeys(asins))[:limit]
-        
-        for rank, asins in enumerate(unique_asins, 1):
-            product = AmazonProduct(
-                asins=asins,
-                title=f"Product {asins}",
-                url=f"{self.base_url}/dp/{asins}",
-                image_url="",
-                price=None,
-                price_display="",
-                currency="USD",
-                rating=None,
-                review_count=None,
-                rank=rank,
-                rank_change="+0",
-                prime=False,
-                category_path="",
-                suitable_for_temu=True,
-                exclusion_reason=None
+    def _parse_product_card(self, card, rank: int) -> Optional[AmazonProduct]:
+        try:
+            asins = None
+            link = card.find('a', href=True)
+            if link:
+                href = link['href']
+                match = re.search(r'/dp/([A-Z0-9]{10})', href)
+                if match:
+                    asins = match.group(1)
+            
+            if not asins:
+                asins_elem = card.get('data-asin') or card.get('id', '')
+                if asins_elem and len(asins_elem) == 10:
+                    asins = asins_elem
+                else:
+                    return None
+            
+            title = ""
+            title_elem = (
+                card.find('span', class_='a-size-base-plus') or
+                card.find('span', class_='a-size-medium') or
+                card.find('h2') or
+                card.find('a', class_='a-link-normal')
             )
-            products.append(product)
+            if title_elem:
+                title = title_elem.get_text(strip=True)
+            
+            if not title:
+                title = f"Amazon Product {asins}"
+            
+            url = f"{self.base_url}/dp/{asins}"
+            
+            image_url = ""
+            img = card.find('img')
+            if img:
+                image_url = img.get('src', '') or img.get('data-src', '')
+            
+            price = None
+            price_display = ""
+            currency = "USD"
+            
+            price_elem = (
+                card.find('span', class_='a-price') or
+                card.find('span', class_='p13n-sc-price') or
+                card.find('span', class_='a-color-price')
+            )
+            if price_elem:
+                price_text = price_elem.get_text(strip=True)
+                price, price_display, currency = self.parse_price(price_text)
+            
+            rating = None
+            rating_elem = card.find('span', class_='a-icon-alt')
+            if rating_elem:
+                rating = self.parse_rating(rating_elem.get_text(strip=True))
+            
+            review_count = None
+            review_elem = (
+                card.find('span', class_='a-size-base') or
+                card.find('a', class_='a-size-small')
+            )
+            if review_elem:
+                review_text = review_elem.get_text(strip=True)
+                if re.search(r'\d', review_text):
+                    review_count = self.parse_review_count(review_text)
+            
+            rank_change = "+0"
+            change_elem = card.find('span', class_='zg-bdg-up') or card.find('span', class_='zg-bdg-down')
+            if change_elem:
+                rank_change = self.parse_rank_change(change_elem.get_text(strip=True))
+            
+            prime = bool(card.find('i', class_='a-icon-prime'))
+            
+            category_path = ""
+            cat_elem = card.find('span', class_='a-size-small')
+            if cat_elem:
+                category_path = cat_elem.get_text(strip=True)
+            
+            suitable, reason = self.is_suitable_for_temu({
+                'title': title,
+                'category_path': category_path,
+                'brand': '',
+                'price': price
+            })
+            
+            return AmazonProduct(
+                asins=asins,
+                title=title,
+                url=url,
+                image_url=image_url,
+                price=price,
+                price_display=price_display,
+                currency=currency,
+                rating=rating,
+                review_count=review_count,
+                rank=rank,
+                rank_change=rank_change,
+                prime=prime,
+                category_path=category_path,
+                suitable_for_temu=suitable,
+                exclusion_reason=reason
+            )
+            
+        except Exception as e:
+            print(f"Error parsing product card: {e}")
+            return None
+    
+    def scrape_real_data(self, category: str = None, limit: int = 20) -> List[AmazonProduct]:
+        if not HAS_REQUESTS:
+            print("requests/beautifulsoup4 not available, falling back to mock data")
+            return []
         
-        return products
+        url = self.get_movers_shakers_url(category)
+        print(f"Fetching: {url}")
+        
+        html = self._fetch_page(url)
+        if not html:
+            print("Failed to fetch page, falling back to mock data")
+            return []
+        
+        try:
+            soup = BeautifulSoup(html, 'html.parser')
+            products = []
+            
+            selectors = [
+                ('div', {'id': 'gridItemRoot'}),
+                ('div', {'class': 'zg-grid-general-faceout'}),
+                ('div', {'class': 'p13n-sc-uncoverable-faceout'}),
+                ('li', {'class': 'zg-item-immersion'}),
+                ('div', {'data-component-type': 's-search-result'}),
+            ]
+            
+            cards = []
+            for tag, attrs in selectors:
+                cards = soup.find_all(tag, attrs)
+                if cards:
+                    break
+            
+            if not cards:
+                cards = soup.find_all('div', class_=re.compile(r'(product|item|card)', re.I))
+            
+            print(f"Found {len(cards)} product cards")
+            
+            for rank, card in enumerate(cards[:limit * 2], 1):
+                product = self._parse_product_card(card, rank)
+                if product:
+                    products.append(product)
+                    if len(products) >= limit:
+                        break
+            
+            return products
+            
+        except Exception as e:
+            print(f"Error parsing HTML: {e}")
+            return []
+    
+    def scrape_search_results(self, keyword: str, limit: int = 20) -> List[AmazonProduct]:
+        if not HAS_REQUESTS:
+            return []
+        
+        url = self.get_search_url(keyword)
+        print(f"Searching: {url}")
+        
+        html = self._fetch_page(url)
+        if not html:
+            return []
+        
+        try:
+            soup = BeautifulSoup(html, 'html.parser')
+            products = []
+            
+            cards = soup.find_all('div', {'data-component-type': 's-search-result'})
+            
+            for rank, card in enumerate(cards[:limit], 1):
+                product = self._parse_product_card(card, rank)
+                if product:
+                    products.append(product)
+            
+            return products
+            
+        except Exception as e:
+            print(f"Error parsing search results: {e}")
+            return []
     
     def generate_mock_data(self, category: str = "home-garden", limit: int = 20) -> List[AmazonProduct]:
         mock_products = [
@@ -319,7 +537,8 @@ def format_output(products: List[AmazonProduct], output_format: str = "json") ->
                 "category": "Home & Kitchen",
                 "scrape_time": datetime.now().isoformat(),
                 "total_products": len(products),
-                "returned_products": len(products)
+                "returned_products": len(products),
+                "data_source": "real" if any(p.asins and not p.asins.startswith("B0MOCK") for p in products) else "mock"
             },
             "products": [asdict(p) for p in products]
         }
@@ -374,16 +593,23 @@ def main():
     )
     parser.add_argument(
         "--mock", action="store_true",
-        help="Generate mock data for testing"
+        help="Force use mock data"
     )
     
     args = parser.parse_args()
     
     scraper = AmazonMoversShakersScraper(site=args.site)
     
-    if args.mock:
-        products = scraper.generate_mock_data(category=args.category, limit=args.limit)
-    else:
+    products = []
+    
+    if not args.mock:
+        if args.search:
+            products = scraper.scrape_search_results(args.search, args.limit)
+        else:
+            products = scraper.scrape_real_data(args.category, args.limit)
+    
+    if not products:
+        print("Using mock data as fallback...")
         products = scraper.generate_mock_data(category=args.category, limit=args.limit)
     
     output = format_output(products, args.format)
