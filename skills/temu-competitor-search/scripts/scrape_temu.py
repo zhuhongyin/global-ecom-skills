@@ -11,10 +11,20 @@ Usage:
 import argparse
 import json
 import re
+import time
+import random
 from dataclasses import dataclass, asdict, field
 from datetime import datetime
 from typing import List, Optional
 from urllib.parse import quote_plus
+
+try:
+    import requests
+    from bs4 import BeautifulSoup
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+    print("Warning: requests/beautifulsoup4 not installed, will use mock data")
 
 
 TEMU_SITES = {
@@ -30,6 +40,12 @@ SORT_OPTIONS = {
     "rating_desc": 3,
     "newest": 4,
 }
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
+]
 
 
 @dataclass
@@ -101,6 +117,49 @@ class TemuCompetitorScraper:
     def __init__(self, site: str = "us"):
         self.site = site
         self.base_url = TEMU_SITES.get(site, TEMU_SITES["us"])
+        self.session = None
+        if HAS_REQUESTS:
+            self.session = requests.Session()
+            self.session.headers.update({
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.5",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Connection": "keep-alive",
+            })
+    
+    def _get_headers(self) -> dict:
+        return {
+            "User-Agent": random.choice(USER_AGENTS),
+            "Referer": self.base_url,
+        }
+    
+    def _fetch_page(self, url: str, retries: int = 3) -> Optional[str]:
+        if not HAS_REQUESTS or not self.session:
+            return None
+        
+        for attempt in range(retries):
+            try:
+                time.sleep(random.uniform(1, 2))
+                response = self.session.get(
+                    url,
+                    headers=self._get_headers(),
+                    timeout=30,
+                    allow_redirects=True
+                )
+                
+                if response.status_code == 200:
+                    return response.text
+                elif response.status_code in [403, 429]:
+                    print(f"Rate limited, waiting... ({attempt + 1}/{retries})")
+                    time.sleep(random.uniform(3, 6))
+                else:
+                    print(f"HTTP {response.status_code} for {url}")
+                    
+            except requests.exceptions.RequestException as e:
+                print(f"Request failed: {e}, retrying... ({attempt + 1}/{retries})")
+                time.sleep(random.uniform(2, 4))
+        
+        return None
     
     def get_search_url(self, keyword: str, sort: str = "price_asc") -> str:
         encoded_keyword = quote_plus(keyword)
@@ -126,6 +185,122 @@ class TemuCompetitorScraper:
                     pass
         
         return 0.0, "USD"
+    
+    def _parse_product_card(self, card, rank: int) -> Optional[TemuProduct]:
+        try:
+            product_id = ""
+            link = card.find('a', href=True)
+            if link:
+                href = link['href']
+                match = re.search(r'[-/](\d+)\.html', href)
+                if match:
+                    product_id = match.group(1)
+                else:
+                    match = re.search(r'goods_id=(\d+)', href)
+                    if match:
+                        product_id = match.group(1)
+            
+            if not product_id:
+                product_id = f"temu_{hash(str(card)) % 1000000}"
+            
+            title = ""
+            title_elem = (
+                card.find('div', class_=re.compile(r'(title|name|desc)', re.I)) or
+                card.find('h3') or
+                card.find('h2')
+            )
+            if title_elem:
+                title = title_elem.get_text(strip=True)
+            
+            if not title:
+                title = f"Temu Product {product_id}"
+            
+            url = f"{self.base_url}/product-{product_id}.html"
+            
+            image_url = ""
+            img = card.find('img')
+            if img:
+                image_url = img.get('src', '') or img.get('data-src', '')
+            
+            price = 0.0
+            original_price = None
+            currency = "USD"
+            
+            price_elem = card.find(['span', 'div'], class_=re.compile(r'(price|cost)', re.I))
+            if price_elem:
+                price_text = price_elem.get_text(strip=True)
+                price, currency = self.parse_price(price_text)
+            
+            original_elem = card.find(['span', 'div'], class_=re.compile(r'(original|was|old)', re.I))
+            if original_elem:
+                original_text = original_elem.get_text(strip=True)
+                original_price, _ = self.parse_price(original_text)
+            
+            discount = ""
+            discount_elem = card.find(['span', 'div'], class_=re.compile(r'(discount|off|sale)', re.I))
+            if discount_elem:
+                discount = discount_elem.get_text(strip=True)
+            
+            rating = None
+            rating_elem = card.find(['span', 'div'], class_=re.compile(r'(rating|star)', re.I))
+            if rating_elem:
+                rating_text = rating_elem.get_text(strip=True)
+                match = re.search(r'([\d.]+)', rating_text)
+                if match:
+                    try:
+                        rating = float(match.group(1))
+                    except ValueError:
+                        pass
+            
+            review_count = None
+            review_elem = card.find(['span', 'div'], class_=re.compile(r'(review|comment)', re.I))
+            if review_elem:
+                review_text = review_elem.get_text(strip=True)
+                match = re.search(r'(\d+)', review_text.replace(',', ''))
+                if match:
+                    review_count = int(match.group(1))
+            
+            sold_count = ""
+            sold_elem = card.find(['span', 'div'], class_=re.compile(r'(sold|sales)', re.I))
+            if sold_elem:
+                sold_count = sold_elem.get_text(strip=True)
+            
+            shipping = "Free shipping"
+            shipping_elem = card.find(['span', 'div'], class_=re.compile(r'(shipping|delivery)', re.I))
+            if shipping_elem:
+                shipping = shipping_elem.get_text(strip=True)
+            
+            seller_name = ""
+            seller_elem = card.find(['span', 'div'], class_=re.compile(r'(seller|store|shop)', re.I))
+            if seller_elem:
+                seller_name = seller_elem.get_text(strip=True)
+            
+            diff = self.detect_differentiation({'title': title, 'price': price})
+            
+            return TemuProduct(
+                product_id=product_id,
+                title=title,
+                url=url,
+                image_url=image_url,
+                price=price,
+                original_price=original_price,
+                discount=discount,
+                currency=currency,
+                rating=rating,
+                review_count=review_count,
+                sold_count=sold_count,
+                shipping=shipping,
+                seller_name=seller_name,
+                seller_rating=4.0,
+                is_bundle=diff["is_bundle"],
+                is_premium=diff["is_premium"],
+                is_lightweight=diff["is_lightweight"],
+                quality_level=diff["quality_level"]
+            )
+            
+        except Exception as e:
+            print(f"Error parsing product card: {e}")
+            return None
     
     def analyze_competition_level(self, total_results: int, price_range: float) -> str:
         if total_results > 100 and price_range < 20:
@@ -180,6 +355,43 @@ class TemuCompetitorScraper:
             "is_lightweight": is_lightweight,
             "quality_level": quality_level
         }
+    
+    def scrape_real_data(self, keyword: str, limit: int = 20, sort: str = "price_asc") -> List[TemuProduct]:
+        if not HAS_REQUESTS:
+            print("requests/beautifulsoup4 not available, falling back to mock data")
+            return []
+        
+        url = self.get_search_url(keyword, sort)
+        print(f"Fetching: {url}")
+        
+        html = self._fetch_page(url)
+        if not html:
+            print("Failed to fetch page, falling back to mock data")
+            return []
+        
+        try:
+            soup = BeautifulSoup(html, 'html.parser')
+            products = []
+            
+            cards = soup.find_all(['div', 'li'], class_=re.compile(r'(item|product|card|goods)', re.I))
+            
+            if not cards:
+                cards = soup.find_all('div', attrs={'data-id': True})
+            
+            print(f"Found {len(cards)} product cards")
+            
+            for rank, card in enumerate(cards[:limit * 2], 1):
+                product = self._parse_product_card(card, rank)
+                if product and product.price > 0:
+                    products.append(product)
+                    if len(products) >= limit:
+                        break
+            
+            return products
+            
+        except Exception as e:
+            print(f"Error parsing HTML: {e}")
+            return []
     
     def generate_mock_data(self, keyword: str, limit: int = 20) -> TemuSearchResult:
         mock_products = [
@@ -345,6 +557,89 @@ class TemuCompetitorScraper:
             market_insights=market_insights,
             recommendation=recommendation
         )
+    
+    def build_result_from_products(self, keyword: str, products: List[TemuProduct]) -> TemuSearchResult:
+        if not products:
+            return self.generate_mock_data(keyword)
+        
+        products.sort(key=lambda x: x.price)
+        prices = [p.price for p in products if p.price > 0]
+        
+        king_price = KingPrice(
+            price=products[0].price,
+            currency=products[0].currency,
+            product_id=products[0].product_id,
+            title=products[0].title,
+            image_url=products[0].image_url,
+            rating=products[0].rating,
+            review_count=products[0].review_count,
+            sold_count=products[0].sold_count,
+            shipping=products[0].shipping,
+            seller=products[0].seller_name,
+            notes="最低价产品"
+        )
+        
+        price_distribution = self._calculate_price_distribution(prices)
+        market_insights = MarketInsight(
+            price_distribution=price_distribution,
+            common_features=["Free shipping"],
+            premium_features=[],
+            gap_opportunities=[]
+        )
+        
+        competition_level = self.analyze_competition_level(len(products), max(prices) - min(prices) if prices else 0)
+        opportunity_score = self.calculate_opportunity_score(competition_level, max(prices) - min(prices) if prices else 0, king_price.price)
+        
+        recommendation = {
+            "market_status": "竞争激烈" if competition_level in ["very_high", "high"] else "有市场机会",
+            "suggested_strategy": "bundle" if competition_level in ["high", "very_high"] else "standard",
+            "suggested_price_range": f"${king_price.price:.0f}-{king_price.price * 1.5:.0f}",
+            "notes": "建议差异化策略"
+        }
+        
+        return TemuSearchResult(
+            keyword=keyword,
+            site=f"temu.com ({self.site.upper()})",
+            search_time=datetime.now().isoformat(),
+            total_results=len(products),
+            returned_results=len(products),
+            lowest_price=min(prices) if prices else 0,
+            highest_price=max(prices) if prices else 0,
+            average_price=sum(prices) / len(prices) if prices else 0,
+            median_price=sorted(prices)[len(prices) // 2] if prices else 0,
+            competition_level=competition_level,
+            opportunity_score=opportunity_score,
+            king_price=king_price,
+            competitors=products,
+            market_insights=market_insights,
+            recommendation=recommendation
+        )
+    
+    def _calculate_price_distribution(self, prices: List[float]) -> List[dict]:
+        if not prices:
+            return []
+        
+        min_price = min(prices)
+        max_price = max(prices)
+        range_size = (max_price - min_price) / 3 if max_price > min_price else 10
+        
+        ranges = [
+            (min_price, min_price + range_size),
+            (min_price + range_size, min_price + range_size * 2),
+            (min_price + range_size * 2, max_price + 1)
+        ]
+        
+        distribution = []
+        for low, high in ranges:
+            count = len([p for p in prices if low <= p < high])
+            percentage = f"{count / len(prices) * 100:.0f}%"
+            distribution.append({
+                "range": f"${low:.0f}-${high:.0f}",
+                "count": count,
+                "percentage": percentage
+            })
+        
+        return distribution
 
 
 def format_output(result: TemuSearchResult, output_format: str = "json") -> str:
@@ -355,7 +650,8 @@ def format_output(result: TemuSearchResult, output_format: str = "json") -> str:
                 "site": result.site,
                 "search_time": result.search_time,
                 "total_results": result.total_results,
-                "returned_results": result.returned_results
+                "returned_results": result.returned_results,
+                "data_source": "real" if not result.king_price.product_id.startswith("temu_") or len(result.competitors) > 5 else "mock"
             },
             "summary": {
                 "lowest_price": result.lowest_price,
@@ -421,11 +717,25 @@ def main():
         choices=["json", "text"],
         help="Output format"
     )
+    parser.add_argument(
+        "--mock", action="store_true",
+        help="Force use mock data"
+    )
     
     args = parser.parse_args()
     
     scraper = TemuCompetitorScraper(site=args.site)
-    result = scraper.generate_mock_data(keyword=args.keyword, limit=args.limit)
+    
+    result = None
+    
+    if not args.mock:
+        products = scraper.scrape_real_data(args.keyword, args.limit, args.sort)
+        if products:
+            result = scraper.build_result_from_products(args.keyword, products)
+    
+    if not result:
+        print("Using mock data as fallback...")
+        result = scraper.generate_mock_data(keyword=args.keyword, limit=args.limit)
     
     output = format_output(result, args.format)
     
