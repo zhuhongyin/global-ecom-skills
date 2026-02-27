@@ -245,6 +245,10 @@ def main():
         help="Calculate required price for target profit"
     )
     parser.add_argument(
+        "--profit-threshold", type=float, default=5.0,
+        help="Net profit threshold for GO decision (default: 5.0)"
+    )
+    parser.add_argument(
         "--format", type=str, default="text",
         choices=["text", "json"],
         help="Output format (default: text)"
@@ -256,6 +260,7 @@ def main():
         exchange_rate=args.exchange_rate,
         fulfillment_fee=args.fulfillment_fee
     )
+    calculator.PROFIT_THRESHOLD = args.profit_threshold
     
     if args.input:
         with open(args.input, 'r', encoding='utf-8') as f:

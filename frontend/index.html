@@ -312,6 +312,7 @@
             </div>
             
             <button class="btn btn-primary" id="workflowBtn" onclick="runWorkflow()">开始选品流程</button>
+            <button class="btn btn-success" onclick="exportWorkflowResult()" style="margin-left: 10px;">导出 JSON</button>
             
             <div class="progress-container" id="progressContainer" style="display: none;">
                 <div class="progress-bar">
@@ -778,6 +779,36 @@
                 localStorage.removeItem('ecomHistory');
                 renderHistory();
             }
+        }
+        
+        function exportWorkflowResult() {
+            const resultEl = document.getElementById('workflowResult');
+            const resultText = resultEl.innerText;
+            
+            if (!resultText || resultText.trim() === '') {
+                alert('请先执行选品流程再导出结果');
+                return;
+            }
+            
+            const dataStr = resultEl.innerHTML.match(/<h3>选品结果摘要<\/h3>([\s\S]+)<\/div>/)?.[1] || '';
+            
+            if (!dataStr) {
+                alert('无法提取选品结果数据');
+                return;
+            }
+            
+            const data = JSON.parse(dataStr);
+            const dataStrFormatted = JSON.stringify(data, null, 2);
+            
+            const blob = new Blob([dataStrFormatted], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `workflow-result-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            addLog('已导出选品结果 JSON 文件', 'success');
         }
         
         checkApiStatus();

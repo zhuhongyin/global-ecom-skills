@@ -469,9 +469,9 @@ class Ali1688Scraper:
                     {
                         "title": f"{keyword} 站立式办公桌 可折叠",
                         "price_tiers": [
-                            {"quantity": "1-9", "price": 145.0},
-                            {"quantity": "10-49", "price": 125.0},
-                            {"quantity": "50+", "price": 105.0}
+                            {"quantity": "1-9", "price": 25.0},
+                            {"quantity": "10-49", "price": 20.0},
+                            {"quantity": "50+", "price": 18.0}
                         ],
                         "material": "冷轧钢+环保板材",
                         "moq": 10,
@@ -488,9 +488,9 @@ class Ali1688Scraper:
                     {
                         "title": f"{keyword} 升降桌架 电动款",
                         "price_tiers": [
-                            {"quantity": "1-9", "price": 180.0},
-                            {"quantity": "10-49", "price": 155.0},
-                            {"quantity": "50+", "price": 130.0}
+                            {"quantity": "1-9", "price": 30.0},
+                            {"quantity": "10-49", "price": 25.0},
+                            {"quantity": "50+", "price": 22.0}
                         ],
                         "material": "优质钢材+实木",
                         "moq": 5,
@@ -507,9 +507,9 @@ class Ali1688Scraper:
                     {
                         "title": f"{keyword} 桌面转换器 简易款",
                         "price_tiers": [
-                            {"quantity": "1-9", "price": 95.0},
-                            {"quantity": "10-49", "price": 85.0},
-                            {"quantity": "50+", "price": 75.0}
+                            {"quantity": "1-9", "price": 18.0},
+                            {"quantity": "10-49", "price": 15.0},
+                            {"quantity": "50+", "price": 12.0}
                         ],
                         "material": "钢材+密度板",
                         "moq": 20,
