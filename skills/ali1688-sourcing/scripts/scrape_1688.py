@@ -458,6 +458,19 @@ class Ali1688Scraper:
         return instruction
     
     def generate_mock_data(self, keyword: str, limit: int = 20) -> Ali1688SearchResult:
+        category_pricing = {
+            "home-garden": {"min": 15.0, "max": 35.0},
+            "electronics": {"min": 8.0, "max": 18.0},
+            "sports": {"min": 12.0, "max": 25.0},
+            "office": {"min": 10.0, "max": 22.0},
+            "beauty": {"min": 6.0, "max": 15.0},
+            "toys": {"min": 5.0, "max": 12.0},
+            "clothing": {"min": 8.0, "max": 18.0},
+            "jewelry": {"min": 10.0, "max": 25.0},
+            "automotive": {"min": 12.0, "max": 28.0},
+            "pet-supplies": {"min": 6.0, "max": 15.0}
+        }
+        
         mock_factories_data = [
             {
                 "name": "安吉县宏达家具有限公司",
@@ -512,6 +525,120 @@ class Ali1688Scraper:
                             {"quantity": "50+", "price": 12.0}
                         ],
                         "material": "钢材+密度板",
+                        "moq": 20,
+                    }
+                ]
+            },
+            {
+                "name": "广州白云区化妆品制造厂",
+                "location": {"province": "广东", "city": "广州"},
+                "verified": True,
+                "verification_type": "企业认证",
+                "rating": 4.5,
+                "products": [
+                    {
+                        "title": f"{keyword} 护肤套装 基础款",
+                        "price_tiers": [
+                            {"quantity": "1-9", "price": 8.0},
+                            {"quantity": "10-49", "price": 6.5},
+                            {"quantity": "50+", "price": 5.5}
+                        ],
+                        "material": "天然植物成分",
+                        "moq": 50,
+                    }
+                ]
+            },
+            {
+                "name": "义乌市玩具制造有限公司",
+                "location": {"province": "浙江", "city": "义乌"},
+                "verified": True,
+                "verification_type": "深度验厂",
+                "rating": 4.7,
+                "products": [
+                    {
+                        "title": f"{keyword} 智能玩具 教育款",
+                        "price_tiers": [
+                            {"quantity": "1-9", "price": 6.0},
+                            {"quantity": "10-49", "price": 5.0},
+                            {"quantity": "50+", "price": 4.0}
+                        ],
+                        "material": "ABS环保塑料",
+                        "moq": 100,
+                    }
+                ]
+            },
+            {
+                "name": "宁波鄞州区服装制造厂",
+                "location": {"province": "浙江", "city": "宁波"},
+                "verified": True,
+                "verification_type": "企业认证",
+                "rating": 4.4,
+                "products": [
+                    {
+                        "title": f"{keyword} 休闲套装 时尚款",
+                        "price_tiers": [
+                            {"quantity": "1-9", "price": 10.0},
+                            {"quantity": "10-49", "price": 8.0},
+                            {"quantity": "50+", "price": 6.5}
+                        ],
+                        "material": "纯棉+涤纶",
+                        "moq": 50,
+                    }
+                ]
+            },
+            {
+                "name": "深圳罗湖区珠宝首饰厂",
+                "location": {"province": "广东", "city": "深圳"},
+                "verified": True,
+                "verification_type": "深度验厂",
+                "rating": 4.6,
+                "products": [
+                    {
+                        "title": f"{keyword} 时尚项链 不锈钢",
+                        "price_tiers": [
+                            {"quantity": "1-9", "price": 12.0},
+                            {"quantity": "10-49", "price": 10.0},
+                            {"quantity": "50+", "price": 8.0}
+                        ],
+                        "material": "316L不锈钢",
+                        "moq": 20,
+                    }
+                ]
+            },
+            {
+                "name": "东莞塘厦区汽车用品厂",
+                "location": {"province": "广东", "city": "东莞"},
+                "verified": True,
+                "verification_type": "企业认证",
+                "rating": 4.3,
+                "products": [
+                    {
+                        "title": f"{keyword} 车载充电器 通用款",
+                        "price_tiers": [
+                            {"quantity": "1-9", "price": 15.0},
+                            {"quantity": "10-49", "price": 12.0},
+                            {"quantity": "50+", "price": 10.0}
+                        ],
+                        "material": "ABS阻燃材料",
+                        "moq": 30,
+                    }
+                ]
+            },
+            {
+                "name": "上海青浦区宠物用品厂",
+                "location": {"province": "上海", "city": "上海"},
+                "verified": True,
+                "verification_type": "企业认证",
+                "rating": 4.5,
+                "products": [
+                    {
+                        "title": f"{keyword} 宠物玩具 耐咬款",
+                        "price_tiers": [
+                            {"quantity": "1-9", "price": 7.0},
+                            {"quantity": "10-49", "price": 5.5},
+                            {"quantity": "50+", "price": 4.5}
+                        ],
+                        "material": "天然橡胶",
                         "moq": 20,
                     }
                 ]

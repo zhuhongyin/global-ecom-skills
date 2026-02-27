@@ -179,7 +179,7 @@
         
         <div class="tabs">
             <div class="tab active" data-tab="workflow">选品流程</div>
-            <div class="tab" data-tab="report">选品报告</div>
+            <!-- <div class="tab" data-tab="report">选品报告</div> -->
             <div class="tab" data-tab="history">历史记录</div>
             <div class="tab" data-tab="calculator">核价计算器</div>
         </div>
@@ -295,10 +295,16 @@
                 <div class="form-group">
                     <label>目标类目</label>
                     <select id="targetCategory">
-                        <option value="home-garden">Home and Kitchen</option>
-                        <option value="electronics">Electronics</option>
-                        <option value="sports">Sports and Outdoors</option>
-                        <option value="office">Office Products</option>
+                        <option value="home-garden">Home & Kitchen (家居用品)</option>
+                        <option value="electronics">Electronics (电子产品)</option>
+                        <option value="sports">Sports & Outdoors (户外用品)</option>
+                        <option value="office">Office Products (办公用品)</option>
+                        <option value="beauty">Beauty & Personal Care (美妆个护)</option>
+                        <option value="toys">Toys & Games (玩具游戏)</option>
+                        <option value="clothing">Clothing & Accessories (服装配饰)</option>
+                        <option value="jewelry">Jewelry & Watches (珠宝手表)</option>
+                        <option value="automotive">Automotive (汽车用品)</option>
+                        <option value="pet-supplies">Pet Supplies (宠物用品)</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -312,7 +318,7 @@
             </div>
             
             <button class="btn btn-primary" id="workflowBtn" onclick="runWorkflow()">开始选品流程</button>
-            <button class="btn btn-success" onclick="exportWorkflowResult()" style="margin-left: 10px;">导出 JSON</button>
+            <button class="btn btn-success" onclick="exportWorkflowResult()" style="margin-left: 10px;">导出结果</button>
             
             <div class="progress-container" id="progressContainer" style="display: none;">
                 <div class="progress-bar">
@@ -332,7 +338,7 @@
             <h2>选品报告</h2>
             <div style="margin-bottom: 20px;">
                 <button class="btn btn-primary" onclick="generateReport()">生成报告</button>
-                <button class="btn btn-success" onclick="exportReport()" style="margin-left: 10px;">导出 JSON</button>
+                <button class="btn btn-success" onclick="exportReport()" style="margin-left: 10px;">导出结果</button>
             </div>
             <div id="reportContent"></div>
         </div>

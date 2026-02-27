@@ -201,7 +201,14 @@ class AmazonMoversShakersScraper:
             })
     
     def _get_headers(self) -> dict:
-        return {"User-Agent": random.choice(USER_AGENTS)}
+        return {
+            "User-Agent": random.choice(USER_AGENTS),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+        }
     
     def fetch_sellersprite_data(self, keyword: str = None, category_id: str = None, limit: int = 20) -> List[AmazonProduct]:
         """使用卖家精灵 API 获取数据"""
@@ -270,10 +277,11 @@ class AmazonMoversShakersScraper:
             print(f"解析卖家精灵数据失败: {e}")
             return None
     
-    def scrape_real_data(self, category: str = None, limit: int = 20) -> List[AmazonProduct]:
+    def scrape_real_data(self, category: str = None, limit: int = 20, silent: bool = False) -> List[AmazonProduct]:
         """真实爬取亚马逊数据"""
         if not HAS_REQUESTS or not HAS_BS4:
-            print("requests/beautifulsoup4 未安装，无法爬取")
+            if not silent:
+                print("requests/beautifulsoup4 未安装，无法爬取")
             return []
         
         if category and category in CATEGORY_URLS:
@@ -281,51 +289,79 @@ class AmazonMoversShakersScraper:
         else:
             url = urljoin(self.base_url, "/Best-Sellers/zgbs")
         
-        print(f"爬取: {url}")
+        if not silent:
+            print(f"爬取: {url}")
         
         try:
             time.sleep(random.uniform(1, 2))
             response = self.session.get(url, headers=self._get_headers(), timeout=30)
             
             if response.status_code != 200:
-                print(f"HTTP {response.status_code}")
+                if not silent:
+                    print(f"HTTP {response.status_code}")
                 return []
             
             soup = BeautifulSoup(response.text, 'html.parser')
             products = []
             
-            cards = soup.find_all(['div', 'li'], class_=re.compile(r'(item|product|card)', re.I))
+            cards = soup.find_all(['div', 'li'], id=re.compile(r'item|product', re.I))
             
-            for rank, card in enumerate(cards[:limit * 2], 1):
+            if not cards:
+                cards = soup.find_all(['div', 'li'], class_=re.compile(r'(item|product|card|zg-item)', re.I))
+            
+            if not cards:
+                cards = soup.select('[data-asin]')
+            
+            if not silent:
+                print(f"找到 {len(cards)} 个候选元素")
+            
+            for rank, card in enumerate(cards[:limit * 3], 1):
                 product = self._parse_html_product(card, rank)
                 if product:
                     products.append(product)
                     if len(products) >= limit:
                         break
             
+            if not silent:
+                print(f"解析出 {len(products)} 个产品")
             return products
             
         except Exception as e:
-            print(f"爬取失败: {e}")
+            if not silent:
+                print(f"爬取失败: {e}")
             return []
     
     def _parse_html_product(self, card, rank: int) -> Optional[AmazonProduct]:
         """解析 HTML 中的产品"""
         try:
-            asin = None
-            link = card.find('a', href=True)
-            if link:
-                match = re.search(r'/dp/([A-Z0-9]{10})', link['href'])
-                if match:
-                    asin = match.group(1)
+            asin = card.get('data-asin') if card.get('data-asin') else None
+            
+            if not asin:
+                link = card.find('a', href=True)
+                if link:
+                    match = re.search(r'/dp/([A-Z0-9]{10})', link['href'])
+                    if match:
+                        asin = match.group(1)
             
             if not asin:
                 return None
             
             title = ""
-            title_elem = card.find(['span', 'h2', 'h3'], class_=re.compile(r'(title|name)', re.I))
-            if title_elem:
-                title = title_elem.get_text(strip=True)
+            for selector in [
+                lambda c: c.find('a', {'href': re.compile(r'/dp/')}),
+                lambda c: c.find(['span', 'div'], class_=re.compile(r'(product-title|p13n-sc-truncated|title)', re.I)),
+                lambda c: c.find('img', {'alt': True}),
+            ]:
+                title_elem = selector(card)
+                if title_elem:
+                    if title_elem.name == 'img':
+                        title = title_elem.get('alt', '')
+                    elif title_elem.name == 'a':
+                        title = title_elem.get_text(strip=True) or title_elem.get('title', '')
+                    else:
+                        title = title_elem.get_text(strip=True)
+                    if title and len(title) > 5:
+                        break
             
             if not title:
                 title = f"Amazon Product {asin}"
@@ -337,18 +373,37 @@ class AmazonMoversShakersScraper:
                 if match:
                     price = float(match.group(1))
             
+            if not price:
+                price_text = card.find(text=re.compile(r'\$\d+'))
+                if price_text:
+                    match = re.search(r'\$([\d.]+)', str(price_text))
+                    if match:
+                        price = float(match.group(1))
+            
             rating = None
-            rating_elem = card.find(['span', 'i'], class_=re.compile(r'(rating|star)', re.I))
+            rating_elem = card.find(['span', 'i'], class_=re.compile(r'(rating|star|a-icon-star)', re.I))
             if rating_elem:
                 match = re.search(r'([\d.]+)', rating_elem.get_text())
                 if match:
                     rating = float(match.group(1))
             
+            if not rating:
+                rating_elem = card.find('span', {'class': re.compile(r'a-icon-alt', re.I)})
+                if rating_elem:
+                    match = re.search(r'([\d.]+)', rating_elem.get_text())
+                    if match:
+                        rating = float(match.group(1))
+            
+            image_url = ""
+            img = card.find('img')
+            if img:
+                image_url = img.get('src', '') or img.get('data-src', '')
+            
             return AmazonProduct(
                 asins=asin,
                 title=title,
                 url=f"{self.base_url}/dp/{asin}",
-                image_url="",
+                image_url=image_url,
                 price=price,
                 price_display=f"${price:.2f}" if price else "",
                 currency="USD",
@@ -405,7 +460,7 @@ class AmazonMoversShakersScraper:
         return products
     
     def fetch_data(self, source: str = "auto", keyword: str = None, category: str = None, 
-                   category_id: str = None, limit: int = 20) -> tuple:
+                   category_id: str = None, limit: int = 20, silent: bool = False) -> tuple:
         """
         获取数据的主方法
         
@@ -415,30 +470,37 @@ class AmazonMoversShakersScraper:
             category: 类目名称
             category_id: 卖家精灵类目ID
             limit: 返回数量
+            silent: 是否静默模式（不打印调试信息）
         
         Returns:
             (products, data_source)
         """
         products = []
-        data_source = "mock"
+        # data_source = "mock"
+        data_source = "auto"
         
         if source == "sellersprite" or (source == "auto" and self.sellersprite):
-            print("尝试使用卖家精灵 API...")
+            if not silent:
+                print("尝试使用卖家精灵 API...")
             products = self.fetch_sellersprite_data(keyword, category_id, limit)
             if products:
                 data_source = "sellersprite"
                 return products, data_source
-            print("卖家精灵 API 无数据，尝试其他数据源...")
+            if not silent:
+                print("卖家精灵 API 无数据，尝试其他数据源...")
         
         if source in ["scrape", "auto"] and not products:
-            print("尝试真实爬取...")
-            products = self.scrape_real_data(category, limit)
+            if not silent:
+                print("尝试真实爬取...")
+            products = self.scrape_real_data(category, limit, silent)
             if products:
                 data_source = "scrape"
                 return products, data_source
-            print("爬取失败，使用 Mock 数据...")
+            if not silent:
+                print("爬取失败，使用 Mock 数据...")
         
-        print("使用 Mock 数据...")
+        if not silent:
+            print("使用 Mock 数据...")
         products = self.generate_mock_data(category, limit)
         data_source = "mock"
         
@@ -503,7 +565,8 @@ def main():
         keyword=args.keyword,
         category=args.category,
         category_id=args.category_id,
-        limit=args.limit
+        limit=args.limit,
+        silent=(args.format == "json")
     )
     
     output = format_output(products, data_source, args.format)
