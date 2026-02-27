@@ -5,12 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>跨境电商选品工具 - Global E-Commerce Skills</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
             --primary: #2563eb;
             --primary-dark: #1d4ed8;
@@ -24,44 +19,22 @@
             --gray-600: #4b5563;
             --gray-800: #1f2937;
         }
-        
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--gray-50);
             color: var(--gray-800);
             line-height: 1.6;
         }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
             padding: 30px 0;
             margin-bottom: 30px;
         }
-        
-        header h1 {
-            font-size: 28px;
-            margin-bottom: 8px;
-        }
-        
-        header p {
-            opacity: 0.9;
-            font-size: 14px;
-        }
-        
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-        
+        header h1 { font-size: 28px; margin-bottom: 8px; }
+        header p { opacity: 0.9; font-size: 14px; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
         .tab {
             padding: 12px 24px;
             background: white;
@@ -71,67 +44,22 @@
             font-weight: 500;
             transition: all 0.2s;
         }
-        
-        .tab:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-        
-        .tab.active {
-            background: var(--primary);
-            border-color: var(--primary);
-            color: white;
-        }
-        
-        .panel {
-            display: none;
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        
-        .panel.active {
-            display: block;
-        }
-        
-        .panel h2 {
-            font-size: 24px;
-            margin-bottom: 20px;
-            color: var(--gray-800);
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: var(--gray-600);
-        }
-        
+        .tab:hover { border-color: var(--primary); color: var(--primary); }
+        .tab.active { background: var(--primary); border-color: var(--primary); color: white; }
+        .panel { display: none; background: white; border-radius: 12px; padding: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .panel.active { display: block; }
+        .panel h2 { font-size: 24px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: var(--gray-600); }
         .form-group input, .form-group select {
             width: 100%;
             padding: 12px 16px;
             border: 2px solid var(--gray-200);
             border-radius: 8px;
             font-size: 16px;
-            transition: border-color 0.2s;
         }
-        
-        .form-group input:focus, .form-group select:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-        
-        .form-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-        }
-        
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
         .btn {
             padding: 12px 24px;
             border: none;
@@ -141,104 +69,24 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background: var(--primary-dark);
-        }
-        
-        .btn-success {
-            background: var(--success);
-            color: white;
-        }
-        
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-        }
-        
-        .result-card {
-            background: var(--gray-50);
-            border-radius: 12px;
-            padding: 24px;
-            margin-top: 24px;
-        }
-        
-        .result-card h3 {
-            font-size: 18px;
-            margin-bottom: 16px;
-        }
-        
-        .result-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid var(--gray-200);
-        }
-        
-        .result-row:last-child {
-            border-bottom: none;
-        }
-        
-        .result-label {
-            color: var(--gray-600);
-        }
-        
-        .result-value {
-            font-weight: 600;
-        }
-        
-        .status-badge {
-            display: inline-block;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 18px;
-        }
-        
-        .status-go {
-            background: #dcfce7;
-            color: #166534;
-        }
-        
-        .status-pass {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-        
-        .status-marginal {
-            background: #fef3c7;
-            color: #92400e;
-        }
-        
-        .workflow-steps {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-        }
-        
-        .workflow-step {
-            background: var(--gray-50);
-            border-radius: 12px;
-            padding: 20px;
-            border-left: 4px solid var(--primary);
-        }
-        
-        .workflow-step h4 {
-            font-size: 16px;
-            margin-bottom: 8px;
-        }
-        
-        .workflow-step p {
-            font-size: 14px;
-            color: var(--gray-600);
-        }
-        
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .result-card { background: var(--gray-50); border-radius: 12px; padding: 24px; margin-top: 24px; }
+        .result-card h3 { font-size: 18px; margin-bottom: 16px; }
+        .result-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--gray-200); }
+        .result-row:last-child { border-bottom: none; }
+        .result-label { color: var(--gray-600); }
+        .result-value { font-weight: 600; }
+        .status-badge { display: inline-block; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 18px; }
+        .status-go { background: #dcfce7; color: #166534; }
+        .status-pass { background: #fee2e2; color: #991b1b; }
+        .status-marginal { background: #fef3c7; color: #92400e; }
+        .workflow-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }
+        .workflow-step { background: var(--gray-50); border-radius: 12px; padding: 20px; border-left: 4px solid var(--primary); }
+        .workflow-step h4 { font-size: 16px; margin-bottom: 8px; }
+        .workflow-step p { font-size: 14px; color: var(--gray-600); }
         .workflow-step .step-number {
             display: inline-block;
             width: 28px;
@@ -251,169 +99,62 @@
             font-size: 14px;
             margin-bottom: 12px;
         }
-        
-        .product-card {
-            background: white;
-            border: 2px solid var(--gray-200);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .product-card h4 {
-            font-size: 18px;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .product-card .priority-badge {
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .priority-high {
-            background: #dcfce7;
-            color: #166534;
-        }
-        
-        .priority-medium {
-            background: #fef3c7;
-            color: #92400e;
-        }
-        
-        .product-section {
-            margin: 16px 0;
-            padding: 16px;
-            background: var(--gray-50);
-            border-radius: 8px;
-        }
-        
-        .product-section h5 {
-            font-size: 14px;
-            color: var(--gray-600);
-            margin-bottom: 8px;
-        }
-        
-        .history-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .history-table th, .history-table td {
-            padding: 12px 16px;
-            text-align: left;
-            border-bottom: 1px solid var(--gray-200);
-        }
-        
-        .history-table th {
-            background: var(--gray-50);
-            font-weight: 600;
-        }
-        
-        .history-table tr:hover {
-            background: var(--gray-50);
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: var(--gray-600);
-        }
-        
-        .loading::after {
-            content: '';
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid var(--gray-300);
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-left: 10px;
-            vertical-align: middle;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
+        .product-card { background: white; border: 2px solid var(--gray-200); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .product-card h4 { font-size: 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+        .product-card .priority-badge { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .priority-high { background: #dcfce7; color: #166534; }
+        .priority-medium { background: #fef3c7; color: #92400e; }
+        .product-section { margin: 16px 0; padding: 16px; background: var(--gray-50); border-radius: 8px; }
+        .product-section h5 { font-size: 14px; color: var(--gray-600); margin-bottom: 8px; }
+        .history-table { width: 100%; border-collapse: collapse; }
+        .history-table th, .history-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--gray-200); }
+        .history-table th { background: var(--gray-50); font-weight: 600; }
+        .history-table tr:hover { background: var(--gray-50); }
+        .loading { text-align: center; padding: 40px; color: var(--gray-600); }
         .formula-box {
             background: #1e293b;
             color: #e2e8f0;
             padding: 20px;
             border-radius: 8px;
-            font-family: 'Monaco', 'Menlo', monospace;
+            font-family: 'Monaco', monospace;
             font-size: 14px;
             margin: 20px 0;
-            overflow-x: auto;
         }
-        
-        .formula-box .highlight {
-            color: #fbbf24;
-        }
-        
-        .formula-box .comment {
-            color: #64748b;
-        }
-        
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
-            
-            header {
-                padding: 20px 0;
-            }
-            
-            header h1 {
-                font-size: 22px;
-            }
-            
-            .panel {
-                padding: 20px;
-            }
-            
-            .tabs {
-                flex-direction: column;
-            }
-            
-            .tab {
-                text-align: center;
-            }
-        }
+        .formula-box .highlight { color: #fbbf24; }
+        .formula-box .comment { color: #64748b; }
+        .api-status { padding: 10px 20px; background: var(--gray-100); border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+        .api-status.connected { background: #dcfce7; color: #166534; }
+        .api-status.disconnected { background: #fee2e2; color: #991b1b; }
     </style>
 </head>
 <body>
     <header>
         <div class="container">
-            <h1>🌍 跨境电商选品工具</h1>
-            <p>Global E-Commerce Skills - V4.1 核价模型 | Temu 选品智能体</p>
+            <h1>跨境电商选品工具</h1>
+            <p>Global E-Commerce Skills - V4.1 核价模型 | 调用真实 Skills 数据</p>
         </div>
     </header>
     
     <div class="container">
+        <div class="api-status" id="apiStatus">检查 API 连接中...</div>
+        
         <div class="tabs">
-            <div class="tab active" data-tab="calculator">💰 核价计算器</div>
-            <div class="tab" data-tab="workflow">🔄 选品流程</div>
-            <div class="tab" data-tab="report">📊 选品报告</div>
-            <div class="tab" data-tab="history">📜 历史记录</div>
+            <div class="tab active" data-tab="calculator">核价计算器</div>
+            <div class="tab" data-tab="workflow">选品流程</div>
+            <div class="tab" data-tab="report">选品报告</div>
+            <div class="tab" data-tab="history">历史记录</div>
         </div>
         
-        <!-- 核价计算器面板 -->
         <div class="panel active" id="calculator">
             <h2>V4.1 核价计算器</h2>
             
             <div class="formula-box">
                 <span class="comment">// V4.1 核价模型</span><br>
-                回款预估 = Temu 卷王价 × <span class="highlight">45%</span><br>
-                回款(人民币) = 回款预估(美元) × 汇率(<span class="highlight">7.2</span>)<br>
-                总成本 = 1688 起批价 + 国内履约费(<span class="highlight">¥3.50</span>)<br>
+                回款预估 = Temu 卷王价 * <span class="highlight">45%</span><br>
+                回款(人民币) = 回款预估(美元) * 汇率(<span class="highlight">7.2</span>)<br>
+                总成本 = 1688 起批价 + 国内履约费(<span class="highlight">3.50</span>)<br>
                 <span class="highlight">净利润 = 回款(人民币) - 总成本</span><br><br>
-                <span class="comment">// 铁律：净利润必须 > ¥5.00，否则直接淘汰</span>
+                <span class="comment">// 铁律：净利润必须 > 5.00，否则直接淘汰</span>
             </div>
             
             <div class="form-row">
@@ -429,7 +170,7 @@
             
             <div class="form-row">
                 <div class="form-group">
-                    <label>汇率 (USD → CNY)</label>
+                    <label>汇率 (USD to CNY)</label>
                     <input type="number" id="exchangeRate" value="7.2" step="0.01">
                 </div>
                 <div class="form-group">
@@ -452,23 +193,23 @@
                 </div>
                 <div class="result-row">
                     <span class="result-label">回款 (人民币)</span>
-                    <span class="result-value" id="resultGrossCNY">¥0.00</span>
+                    <span class="result-value" id="resultGrossCNY">0.00</span>
                 </div>
                 <div class="result-row">
                     <span class="result-label">1688 拿货价</span>
-                    <span class="result-value" id="resultAli1688">¥0.00</span>
+                    <span class="result-value" id="resultAli1688">0.00</span>
                 </div>
                 <div class="result-row">
                     <span class="result-label">国内履约费</span>
-                    <span class="result-value" id="resultFulfillment">¥0.00</span>
+                    <span class="result-value" id="resultFulfillment">0.00</span>
                 </div>
                 <div class="result-row">
                     <span class="result-label">总成本</span>
-                    <span class="result-value" id="resultTotalCost">¥0.00</span>
+                    <span class="result-value" id="resultTotalCost">0.00</span>
                 </div>
                 <div class="result-row" style="border-top: 2px solid var(--gray-300); padding-top: 16px; margin-top: 8px;">
                     <span class="result-label" style="font-size: 18px; font-weight: 600;">净利润</span>
-                    <span class="result-value" id="resultNetProfit" style="font-size: 24px; font-weight: 700;">¥0.00</span>
+                    <span class="result-value" id="resultNetProfit" style="font-size: 24px; font-weight: 700;">0.00</span>
                 </div>
                 <div style="text-align: center; margin-top: 20px;">
                     <span class="status-badge" id="resultStatus">计算中...</span>
@@ -477,7 +218,6 @@
             </div>
         </div>
         
-        <!-- 选品流程面板 -->
         <div class="panel" id="workflow">
             <h2>选品流程演示</h2>
             
@@ -485,7 +225,7 @@
                 <div class="workflow-step">
                     <span class="step-number">1</span>
                     <h4>亚马逊飙升榜</h4>
-                    <p>获取 Movers & Shakers 数据，发现爆款趋势</p>
+                    <p>获取 Movers and Shakers 数据</p>
                 </div>
                 <div class="workflow-step">
                     <span class="step-number">2</span>
@@ -502,11 +242,6 @@
                     <h4>V4.1 核价</h4>
                     <p>计算净利润，判定 GO/PASS</p>
                 </div>
-                <div class="workflow-step">
-                    <span class="step-number">5</span>
-                    <h4>输出报告</h4>
-                    <p>生成 5 款推荐产品报告</p>
-                </div>
             </div>
             
             <div class="form-row">
@@ -516,53 +251,45 @@
                         <option value="amazon.com">Amazon US</option>
                         <option value="amazon.co.uk">Amazon UK</option>
                         <option value="amazon.de">Amazon DE</option>
-                        <option value="amazon.co.jp">Amazon JP</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>目标类目</label>
                     <select id="targetCategory">
-                        <option value="home-garden">Home & Kitchen</option>
+                        <option value="home-garden">Home and Kitchen</option>
                         <option value="electronics">Electronics</option>
-                        <option value="sports">Sports & Outdoors</option>
+                        <option value="sports">Sports and Outdoors</option>
                         <option value="office">Office Products</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>产品数量</label>
                     <select id="productCount">
-                        <option value="5">5 款</option>
+                        <option value="3">3 款</option>
+                        <option value="5" selected>5 款</option>
                         <option value="10">10 款</option>
-                        <option value="20">20 款</option>
                     </select>
                 </div>
             </div>
             
             <button class="btn btn-primary" onclick="runWorkflow()">开始选品流程</button>
-            
             <div id="workflowResult" style="margin-top: 20px;"></div>
         </div>
         
-        <!-- 选品报告面板 -->
         <div class="panel" id="report">
             <h2>选品报告</h2>
-            
             <div style="margin-bottom: 20px;">
                 <button class="btn btn-primary" onclick="generateReport()">生成报告</button>
                 <button class="btn btn-success" onclick="exportReport()" style="margin-left: 10px;">导出 JSON</button>
             </div>
-            
             <div id="reportContent"></div>
         </div>
         
-        <!-- 历史记录面板 -->
         <div class="panel" id="history">
             <h2>历史记录</h2>
-            
             <div style="margin-bottom: 20px;">
                 <button class="btn btn-danger" onclick="clearHistory()">清空历史</button>
             </div>
-            
             <div id="historyContent">
                 <p style="color: var(--gray-600); text-align: center; padding: 40px;">暂无历史记录</p>
             </div>
@@ -570,7 +297,27 @@
     </div>
     
     <script>
-        // Tab 切换
+        const API_BASE = 'http://localhost:5000/api';
+        let apiConnected = false;
+        
+        async function checkApiStatus() {
+            const statusEl = document.getElementById('apiStatus');
+            try {
+                const response = await fetch(`${API_BASE}/health`, { timeout: 3000 });
+                if (response.ok) {
+                    apiConnected = true;
+                    statusEl.textContent = 'API 已连接 - 调用真实 Skills 数据';
+                    statusEl.className = 'api-status connected';
+                } else {
+                    throw new Error('API not responding');
+                }
+            } catch (error) {
+                apiConnected = false;
+                statusEl.textContent = 'API 未连接 - 请运行: python frontend/api_server.py';
+                statusEl.className = 'api-status disconnected';
+            }
+        }
+        
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -580,72 +327,98 @@
             });
         });
         
-        // V4.1 核价计算
-        function calculatePricing() {
+        async function calculatePricing() {
             const temuPrice = parseFloat(document.getElementById('temuPrice').value) || 0;
             const ali1688Price = parseFloat(document.getElementById('ali1688Price').value) || 0;
             const exchangeRate = parseFloat(document.getElementById('exchangeRate').value) || 7.2;
             const fulfillmentFee = parseFloat(document.getElementById('fulfillmentFee').value) || 3.5;
             
-            const grossRevenueUSD = temuPrice * 0.45;
-            const grossRevenueCNY = grossRevenueUSD * exchangeRate;
-            const totalCost = ali1688Price + fulfillmentFee;
-            const netProfit = grossRevenueCNY - totalCost;
-            
-            document.getElementById('resultTemuPrice').textContent = '$' + temuPrice.toFixed(2);
-            document.getElementById('resultGrossRevenue').textContent = '$' + grossRevenueUSD.toFixed(2);
-            document.getElementById('resultGrossCNY').textContent = '¥' + grossRevenueCNY.toFixed(2);
-            document.getElementById('resultAli1688').textContent = '¥' + ali1688Price.toFixed(2);
-            document.getElementById('resultFulfillment').textContent = '¥' + fulfillmentFee.toFixed(2);
-            document.getElementById('resultTotalCost').textContent = '¥' + totalCost.toFixed(2);
-            document.getElementById('resultNetProfit').textContent = '¥' + netProfit.toFixed(2);
-            
-            const statusEl = document.getElementById('resultStatus');
-            const recommendationEl = document.getElementById('resultRecommendation');
-            
-            if (netProfit > 10) {
-                statusEl.textContent = '✅ STRONG GO';
-                statusEl.className = 'status-badge status-go';
-                recommendationEl.textContent = '高利润产品，优先上架！';
-            } else if (netProfit > 5) {
-                statusEl.textContent = '✅ GO';
-                statusEl.className = 'status-badge status-go';
-                recommendationEl.textContent = '利润达标，可以上架';
-            } else if (netProfit > 3) {
-                statusEl.textContent = '⚠️ MARGINAL';
-                statusEl.className = 'status-badge status-marginal';
-                recommendationEl.textContent = '利润边缘，需优化成本或定价';
-            } else {
-                statusEl.textContent = '❌ PASS';
-                statusEl.className = 'status-badge status-pass';
-                recommendationEl.textContent = '利润不足，建议放弃';
-            }
-            
             document.getElementById('calculatorResult').style.display = 'block';
+            document.getElementById('resultStatus').textContent = '计算中...';
+            document.getElementById('resultStatus').className = 'status-badge';
             
-            // 保存到历史记录
-            saveHistory({
-                type: 'pricing',
-                temuPrice,
-                ali1688Price,
-                netProfit,
-                status: netProfit > 5 ? 'GO' : 'PASS',
-                timestamp: new Date().toISOString()
-            });
+            try {
+                const response = await fetch(`${API_BASE}/pricing/calculate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        temu_price: temuPrice,
+                        ali1688_price: ali1688Price,
+                        exchange_rate: exchangeRate,
+                        fulfillment_fee: fulfillmentFee
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.error) throw new Error(result.error);
+                
+                const calc = result.calculation;
+                const decision = result.decision;
+                
+                document.getElementById('resultTemuPrice').textContent = '$' + temuPrice.toFixed(2);
+                document.getElementById('resultGrossRevenue').textContent = '$' + calc.gross_revenue_usd.toFixed(2);
+                document.getElementById('resultGrossCNY').textContent = '' + calc.gross_revenue_cny.toFixed(2);
+                document.getElementById('resultAli1688').textContent = '' + ali1688Price.toFixed(2);
+                document.getElementById('resultFulfillment').textContent = '' + fulfillmentFee.toFixed(2);
+                document.getElementById('resultTotalCost').textContent = '' + calc.total_cost.toFixed(2);
+                document.getElementById('resultNetProfit').textContent = '' + calc.net_profit.toFixed(2);
+                
+                const statusEl = document.getElementById('resultStatus');
+                const status = decision.status;
+                
+                if (status === 'STRONG_GO') {
+                    statusEl.textContent = 'STRONG GO';
+                    statusEl.className = 'status-badge status-go';
+                } else if (status === 'GO') {
+                    statusEl.textContent = 'GO';
+                    statusEl.className = 'status-badge status-go';
+                } else if (status === 'MARGINAL') {
+                    statusEl.textContent = 'MARGINAL';
+                    statusEl.className = 'status-badge status-marginal';
+                } else {
+                    statusEl.textContent = 'PASS';
+                    statusEl.className = 'status-badge status-pass';
+                }
+                document.getElementById('resultRecommendation').textContent = decision.recommendation;
+                
+                saveHistory({
+                    type: 'pricing',
+                    temuPrice,
+                    ali1688Price,
+                    netProfit: calc.net_profit,
+                    status: status,
+                    timestamp: new Date().toISOString()
+                });
+                
+            } catch (error) {
+                console.error('API Error:', error);
+                document.getElementById('resultStatus').textContent = 'API 连接失败';
+                document.getElementById('resultStatus').className = 'status-badge status-pass';
+                document.getElementById('resultRecommendation').textContent = '请确保后端服务已启动: python frontend/api_server.py';
+            }
         }
         
-        // 选品流程
-        function runWorkflow() {
+        async function runWorkflow() {
             const site = document.getElementById('targetSite').value;
             const category = document.getElementById('targetCategory').value;
             const count = parseInt(document.getElementById('productCount').value);
             
             const resultEl = document.getElementById('workflowResult');
-            resultEl.innerHTML = '<div class="loading">正在执行选品流程</div>';
+            resultEl.innerHTML = '<div class="loading">正在执行选品流程（调用真实 Skills）...</div>';
             
-            setTimeout(() => {
-                const mockData = generateMockWorkflow(site, category, count);
-                resultEl.innerHTML = renderWorkflowResult(mockData);
+            try {
+                const response = await fetch(`${API_BASE}/workflow/run`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ site, category, count })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) throw new Error(data.error);
+                
+                resultEl.innerHTML = renderWorkflowResult(data);
                 
                 saveHistory({
                     type: 'workflow',
@@ -654,243 +427,104 @@
                     count,
                     timestamp: new Date().toISOString()
                 });
-            }, 1500);
-        }
-        
-        function generateMockWorkflow(site, category, count) {
-            const products = [];
-            const categoryNames = {
-                'home-garden': 'Home & Kitchen',
-                'electronics': 'Electronics',
-                'sports': 'Sports & Outdoors',
-                'office': 'Office Products'
-            };
-            
-            for (let i = 0; i < count; i++) {
-                const temuPrice = (Math.random() * 30 + 10).toFixed(2);
-                const ali1688Price = (Math.random() * 50 + 15).toFixed(2);
-                const netProfit = (temuPrice * 0.45 * 7.2 - ali1688Price - 3.5).toFixed(2);
                 
-                products.push({
-                    id: i + 1,
-                    name: `产品 ${i + 1}`,
-                    category: categoryNames[category],
-                    temuPrice: parseFloat(temuPrice),
-                    ali1688Price: parseFloat(ali1688Price),
-                    netProfit: parseFloat(netProfit),
-                    status: netProfit > 5 ? 'GO' : 'PASS'
-                });
+            } catch (error) {
+                console.error('API Error:', error);
+                resultEl.innerHTML = '<div class="result-card"><h3>API 连接失败</h3><p style="color: var(--danger);">请确保后端服务已启动:</p><code style="background: var(--gray-100); padding: 10px; display: block; border-radius: 4px;">python frontend/api_server.py</code></div>';
             }
-            
-            return { site, category, products };
         }
         
         function renderWorkflowResult(data) {
-            const goProducts = data.products.filter(p => p.status === 'GO');
+            const products = data.products || [];
+            const goProducts = products.filter(p => p.pricing && ['GO', 'STRONG GO'].includes(p.pricing.decision?.status));
             
-            let html = `
-                <div class="result-card">
-                    <h3>选品结果摘要</h3>
-                    <div class="result-row">
-                        <span class="result-label">目标站点</span>
-                        <span class="result-value">${data.site}</span>
-                    </div>
-                    <div class="result-row">
-                        <span class="result-label">目标类目</span>
-                        <span class="result-value">${data.products[0]?.category || 'N/A'}</span>
-                    </div>
-                    <div class="result-row">
-                        <span class="result-label">候选产品数</span>
-                        <span class="result-value">${data.products.length}</span>
-                    </div>
-                    <div class="result-row">
-                        <span class="result-label">通过核价</span>
-                        <span class="result-value" style="color: var(--success);">${goProducts.length} 款</span>
-                    </div>
-                </div>
-            `;
+            let html = '<div class="result-card"><h3>选品结果摘要</h3>';
+            html += '<div class="result-row"><span class="result-label">目标站点</span><span class="result-value">' + (data.metadata?.site || 'N/A') + '</span></div>';
+            html += '<div class="result-row"><span class="result-label">候选产品数</span><span class="result-value">' + products.length + '</span></div>';
+            html += '<div class="result-row"><span class="result-label">通过核价</span><span class="result-value" style="color: var(--success);">' + goProducts.length + ' 款</span></div>';
+            html += '</div>';
             
             if (goProducts.length > 0) {
-                html += '<h3 style="margin-top: 24px;">✅ 通过核价的产品</h3>';
+                html += '<h3 style="margin-top: 24px;">通过核价的产品</h3>';
                 goProducts.forEach(p => {
-                    html += `
-                        <div class="product-card">
-                            <h4>${p.name} <span class="priority-badge priority-high">GO</span></h4>
-                            <div class="product-section">
-                                <h5>利润分析</h5>
-                                <div class="result-row">
-                                    <span class="result-label">Temu 卷王价</span>
-                                    <span class="result-value">$${p.temuPrice.toFixed(2)}</span>
-                                </div>
-                                <div class="result-row">
-                                    <span class="result-label">1688 拿货价</span>
-                                    <span class="result-value">¥${p.ali1688Price.toFixed(2)}</span>
-                                </div>
-                                <div class="result-row">
-                                    <span class="result-label">净利润</span>
-                                    <span class="result-value" style="color: var(--success); font-weight: 700;">¥${p.netProfit.toFixed(2)}</span>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                    const amazon = p.amazon || {};
+                    const temu = p.temu || {};
+                    const pricing = p.pricing || {};
+                    
+                    html += '<div class="product-card">';
+                    html += '<h4>' + (amazon.title?.substring(0, 50) || 'Unknown Product') + ' <span class="priority-badge priority-high">' + (pricing.decision?.status || 'N/A') + '</span></h4>';
+                    html += '<div class="product-section"><h5>亚马逊数据</h5>';
+                    html += '<div class="result-row"><span class="result-label">ASIN</span><span class="result-value">' + (amazon.asins || 'N/A') + '</span></div>';
+                    html += '<div class="result-row"><span class="result-label">价格</span><span class="result-value">' + (amazon.price || 'N/A') + '</span></div>';
+                    html += '</div>';
+                    html += '<div class="product-section"><h5>Temu 竞品</h5>';
+                    html += '<div class="result-row"><span class="result-label">卷王价</span><span class="result-value">$' + (temu.king_price?.price || 'N/A') + '</span></div>';
+                    html += '</div>';
+                    html += '<div class="product-section"><h5>利润分析</h5>';
+                    html += '<div class="result-row"><span class="result-label">净利润</span><span class="result-value" style="color: var(--success); font-weight: 700;">' + (pricing.calculation?.net_profit?.toFixed(2) || 'N/A') + '</span></div>';
+                    html += '</div>';
+                    html += '</div>';
                 });
+            } else {
+                html += '<p style="text-align: center; color: var(--gray-600); margin-top: 20px;">暂无通过核价的产品</p>';
             }
             
             return html;
         }
         
-        // 选品报告
-        function generateReport() {
+        async function generateReport() {
             const reportEl = document.getElementById('reportContent');
-            reportEl.innerHTML = '<div class="loading">正在生成报告</div>';
+            reportEl.innerHTML = '<div class="loading">正在生成报告（调用真实 Skills）...</div>';
             
-            setTimeout(() => {
-                const report = generateMockReport();
-                reportEl.innerHTML = renderReport(report);
+            try {
+                const response = await fetch(`${API_BASE}/report/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ site: 'amazon.com', category: 'home-garden', count: 5 })
+                });
+                
+                const report = await response.json();
+                
+                if (report.error) throw new Error(report.error);
+                
                 window.currentReport = report;
+                reportEl.innerHTML = renderReport(report);
                 
                 saveHistory({
                     type: 'report',
-                    productCount: report.recommended_products.length,
+                    productCount: report.recommended_products?.length || 0,
                     timestamp: new Date().toISOString()
                 });
-            }, 2000);
-        }
-        
-        function generateMockReport() {
-            const products = [];
-            const productNames = [
-                '升降桌转换器 Standing Desk Converter',
-                '桌垫 Desk Mat',
-                '显示器支架 Monitor Stand',
-                '键盘托 Keyboard Tray',
-                '理线器 Cable Management'
-            ];
-            
-            for (let i = 0; i < 5; i++) {
-                const temuPrice = (Math.random() * 30 + 15).toFixed(2);
-                const ali1688Price = (Math.random() * 40 + 20).toFixed(2);
-                const netProfit = (temuPrice * 0.45 * 7.2 - ali1688Price - 3.5).toFixed(2);
                 
-                products.push({
-                    product_id: i + 1,
-                    product_name: productNames[i].split(' ')[0],
-                    product_name_en: productNames[i].split(' ').slice(1).join(' '),
-                    frontend_marketing: {
-                        amazon_heat: '亚马逊飙升榜 Top 20，居家办公趋势带动',
-                        blue_ocean_strategy: 'Temu 现有产品多为低价基础款，建议做差异化',
-                        compliance: '需 CE 认证（出口欧洲）',
-                        sourcing_instruction: '找货关键词：' + productNames[i].split(' ')[0]
-                    },
-                    backend_survival: {
-                        temu_king_price: { price: parseFloat(temuPrice), currency: 'USD' },
-                        cost_breakdown: {
-                            ali1688_price: parseFloat(ali1688Price),
-                            fulfillment_fee: 3.5,
-                            total_cost: parseFloat(ali1688Price) + 3.5
-                        },
-                        profit_analysis: {
-                            net_profit: parseFloat(netProfit),
-                            margin_percentage: ((netProfit / (temuPrice * 7.2)) * 100).toFixed(1) + '%',
-                            status: netProfit > 5 ? 'GO' : 'PASS'
-                        }
-                    },
-                    recommendation: {
-                        priority: netProfit > 10 ? 'HIGH' : netProfit > 5 ? 'MEDIUM' : 'LOW',
-                        strategy: 'bundle',
-                        notes: netProfit > 5 ? '建议优先上架' : '利润不足，建议放弃'
-                    }
-                });
+            } catch (error) {
+                console.error('API Error:', error);
+                reportEl.innerHTML = '<div class="result-card"><h3>API 连接失败</h3><p style="color: var(--danger);">请确保后端服务已启动: python frontend/api_server.py</p></div>';
             }
-            
-            return {
-                metadata: {
-                    generated_at: new Date().toISOString(),
-                    site: 'amazon.com',
-                    category: 'Home & Kitchen',
-                    recommended_count: 5
-                },
-                recommended_products: products,
-                summary: {
-                    total_profitable: products.filter(p => p.backend_survival.profit_analysis.status === 'GO').length,
-                    average_margin: '32.5%'
-                }
-            };
         }
         
         function renderReport(report) {
-            let html = `
-                <div class="result-card">
-                    <h3>报告摘要</h3>
-                    <div class="result-row">
-                        <span class="result-label">生成时间</span>
-                        <span class="result-value">${new Date(report.metadata.generated_at).toLocaleString('zh-CN')}</span>
-                    </div>
-                    <div class="result-row">
-                        <span class="result-label">目标站点</span>
-                        <span class="result-value">${report.metadata.site}</span>
-                    </div>
-                    <div class="result-row">
-                        <span class="result-label">推荐产品数</span>
-                        <span class="result-value">${report.metadata.recommended_count}</span>
-                    </div>
-                    <div class="result-row">
-                        <span class="result-label">通过核价</span>
-                        <span class="result-value" style="color: var(--success);">${report.summary.total_profitable} 款</span>
-                    </div>
-                </div>
-            `;
+            let html = '<div class="result-card"><h3>报告摘要</h3>';
+            html += '<div class="result-row"><span class="result-label">生成时间</span><span class="result-value">' + new Date(report.metadata?.generated_at).toLocaleString('zh-CN') + '</span></div>';
+            html += '<div class="result-row"><span class="result-label">推荐产品数</span><span class="result-value">' + (report.metadata?.recommended_count || 0) + '</span></div>';
+            html += '<div class="result-row"><span class="result-label">通过核价</span><span class="result-value" style="color: var(--success);">' + (report.summary?.total_profitable || 0) + ' 款</span></div>';
+            html += '</div>';
             
-            report.recommended_products.forEach(p => {
-                const statusClass = p.backend_survival.profit_analysis.status === 'GO' ? 'status-go' : 'status-pass';
-                const priorityClass = p.recommendation.priority === 'HIGH' ? 'priority-high' : 'priority-medium';
+            const products = report.recommended_products || [];
+            products.forEach(p => {
+                const statusClass = p.backend_survival?.profit_analysis?.status === 'GO' ? 'status-go' : 'status-pass';
                 
-                html += `
-                    <div class="product-card">
-                        <h4>
-                            ${p.product_id}. ${p.product_name} (${p.product_name_en})
-                            <span class="priority-badge ${priorityClass}">${p.recommendation.priority}</span>
-                        </h4>
-                        
-                        <div class="product-section">
-                            <h5>📈 前端营销逻辑</h5>
-                            <p><strong>亚马逊热度：</strong>${p.frontend_marketing.amazon_heat}</p>
-                            <p><strong>蓝海策略：</strong>${p.frontend_marketing.blue_ocean_strategy}</p>
-                            <p><strong>合规要求：</strong>${p.frontend_marketing.compliance}</p>
-                            <p><strong>找货指令：</strong>${p.frontend_marketing.sourcing_instruction}</p>
-                        </div>
-                        
-                        <div class="product-section">
-                            <h5>💰 后端生存逻辑 (V4.1)</h5>
-                            <div class="result-row">
-                                <span class="result-label">Temu 卷王价</span>
-                                <span class="result-value">$${p.backend_survival.temu_king_price.price.toFixed(2)}</span>
-                            </div>
-                            <div class="result-row">
-                                <span class="result-label">1688 拿货价</span>
-                                <span class="result-value">¥${p.backend_survival.cost_breakdown.ali1688_price.toFixed(2)}</span>
-                            </div>
-                            <div class="result-row">
-                                <span class="result-label">总成本</span>
-                                <span class="result-value">¥${p.backend_survival.cost_breakdown.total_cost.toFixed(2)}</span>
-                            </div>
-                            <div class="result-row">
-                                <span class="result-label">净利润</span>
-                                <span class="result-value" style="font-weight: 700; color: ${p.backend_survival.profit_analysis.status === 'GO' ? 'var(--success)' : 'var(--danger)'};">
-                                    ¥${p.backend_survival.profit_analysis.net_profit.toFixed(2)}
-                                </span>
-                            </div>
-                            <div style="text-align: center; margin-top: 12px;">
-                                <span class="status-badge ${statusClass}">${p.backend_survival.profit_analysis.status}</span>
-                            </div>
-                        </div>
-                        
-                        <div class="product-section">
-                            <h5>📝 建议</h5>
-                            <p>${p.recommendation.notes}</p>
-                        </div>
-                    </div>
-                `;
+                html += '<div class="product-card">';
+                html += '<h4>' + p.product_id + '. ' + p.product_name + ' (' + p.product_name_en + ')</h4>';
+                html += '<div class="product-section"><h5>前端营销逻辑</h5>';
+                html += '<p><strong>亚马逊热度：</strong>' + (p.frontend_marketing?.amazon_heat || 'N/A') + '</p>';
+                html += '<p><strong>蓝海策略：</strong>' + (p.frontend_marketing?.blue_ocean_strategy || 'N/A') + '</p>';
+                html += '</div>';
+                html += '<div class="product-section"><h5>后端生存逻辑 (V4.1)</h5>';
+                html += '<div class="result-row"><span class="result-label">Temu 卷王价</span><span class="result-value">$' + (p.backend_survival?.temu_king_price?.price || 0).toFixed(2) + '</span></div>';
+                html += '<div class="result-row"><span class="result-label">净利润</span><span class="result-value" style="font-weight: 700;">' + (p.backend_survival?.profit_analysis?.net_profit || 0).toFixed(2) + '</span></div>';
+                html += '<div style="text-align: center; margin-top: 12px;"><span class="status-badge ' + statusClass + '">' + (p.backend_survival?.profit_analysis?.status || 'N/A') + '</span></div>';
+                html += '</div>';
+                html += '</div>';
             });
             
             return html;
@@ -901,18 +535,16 @@
                 alert('请先生成报告');
                 return;
             }
-            
             const dataStr = JSON.stringify(window.currentReport, null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `ecom-report-${new Date().toISOString().slice(0, 10)}.json`;
+            a.download = 'ecom-report-' + new Date().toISOString().slice(0, 10) + '.json';
             a.click();
             URL.revokeObjectURL(url);
         }
         
-        // 历史记录
         function saveHistory(record) {
             const history = JSON.parse(localStorage.getItem('ecomHistory') || '[]');
             history.unshift(record);
@@ -930,18 +562,7 @@
                 return;
             }
             
-            let html = `
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th>时间</th>
-                            <th>类型</th>
-                            <th>详情</th>
-                            <th>结果</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
+            let html = '<table class="history-table"><thead><tr><th>时间</th><th>类型</th><th>详情</th><th>结果</th></tr></thead><tbody>';
             
             history.forEach(h => {
                 const time = new Date(h.timestamp).toLocaleString('zh-CN');
@@ -949,28 +570,19 @@
                 
                 if (h.type === 'pricing') {
                     type = '核价计算';
-                    detail = `Temu $${h.temuPrice} / 1688 ¥${h.ali1688Price}`;
-                    result = h.status === 'GO' 
-                        ? '<span style="color: var(--success);">✅ GO (¥' + h.netProfit.toFixed(2) + ')</span>'
-                        : '<span style="color: var(--danger);">❌ PASS (¥' + h.netProfit.toFixed(2) + ')</span>';
+                    detail = 'Temu $' + h.temuPrice + ' / 1688 ' + h.ali1688Price;
+                    result = h.status === 'GO' ? '<span style="color: var(--success);">GO (' + h.netProfit.toFixed(2) + ')</span>' : '<span style="color: var(--danger);">PASS (' + h.netProfit.toFixed(2) + ')</span>';
                 } else if (h.type === 'workflow') {
                     type = '选品流程';
-                    detail = `${h.site} / ${h.category}`;
-                    result = `${h.count} 款产品`;
+                    detail = h.site + ' / ' + h.category;
+                    result = h.count + ' 款产品';
                 } else {
                     type = '选品报告';
-                    detail = `${h.productCount} 款产品`;
+                    detail = h.productCount + ' 款产品';
                     result = '已生成';
                 }
                 
-                html += `
-                    <tr>
-                        <td>${time}</td>
-                        <td>${type}</td>
-                        <td>${detail}</td>
-                        <td>${result}</td>
-                    </tr>
-                `;
+                html += '<tr><td>' + time + '</td><td>' + type + '</td><td>' + detail + '</td><td>' + result + '</td></tr>';
             });
             
             html += '</tbody></table>';
@@ -984,7 +596,7 @@
             }
         }
         
-        // 初始化
+        checkApiStatus();
         renderHistory();
     </script>
 </body>

@@ -244,6 +244,11 @@ def main():
         "--target-profit", type=float,
         help="Calculate required price for target profit"
     )
+    parser.add_argument(
+        "--format", type=str, default="text",
+        choices=["text", "json"],
+        help="Output format (default: text)"
+    )
     
     args = parser.parse_args()
     
@@ -323,7 +328,16 @@ def main():
             ali1688_price=args.ali1688_price
         )
         result = calculator.calculate(data)
-        print(format_result_output(result))
+        
+        if args.format == "json":
+            output = {
+                "input": result.input,
+                "calculation": result.calculation,
+                "decision": result.decision
+            }
+            print(json.dumps(output, ensure_ascii=False, indent=2))
+        else:
+            print(format_result_output(result))
         return
     
     parser.print_help()
