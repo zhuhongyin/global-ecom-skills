@@ -1,4 +1,43 @@
-# E-Commerce Skills 选品系统 - 架构说明文档
+# E-Commerce Skills 选品系统 
+
+## 📝 开发说明
+
+### 依赖安装
+
+```bash
+# 安装核心依赖
+pip install fastapi uvicorn requests beautifulsoup4 -i https://pypi.org/simple/
+```
+
+### 环境要求
+
+- Python 3.9+
+- 现代浏览器（支持 SSE）
+- 网络连接（用于真实爬取）
+
+### Mock 数据说明
+
+Mock 数据用于开发和测试，真实爬取失败时自动降级。Mock 数据已优化价格，确保核价能通过。
+
+---
+
+## 🎯 快速开始
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/zhuhongyin/global-ecom-skills.git
+
+# 2. 进入目录
+cd lgskill3
+
+# 3. 安装依赖并启动
+./start.sh
+
+# 4. 打开浏览器
+open http://localhost:5000
+```
+
+---
 
 ## 📋 功能介绍
 
@@ -20,25 +59,25 @@
 ## 🏗️ 架构概览
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                                                         │
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
 │                   ┌──────────────────────┐                  │
-│                   │   Frontend (HTML)  │                  │
+│                   │   Frontend (HTML)    │                  │
 │                   └──────────────────────┘                  │
-│                           ↓ HTTP/SSE               │
+│                           ↓ HTTP/SSE                        │
 │                   ┌──────────────────────┐                  │
-│                   │  API Server (FastAPI) │                  │
+│                   │  API Server (FastAPI)│                  │
 │                   └──────────────────────┘                  │
-│                           ↓ Subprocess                │
+│                           ↓ Subprocess                      │
 │                   ┌──────────────────────┐                  │
-│                   │   Skills (Python Scripts)   │                  │
+│                   │  Skills Module       │                  │
 │                   └──────────────────────┘                  │
-│                           ↓ HTTP Requests                │
+│                           ↓ HTTP Requests                   │
 │                   ┌──────────────────────┐                  │
-│                   │  External APIs (Mock/Real)   │                  │
+│                   │  External APIs       │                  │          
 │                   └──────────────────────┘                  │
-│                                                         │
-└─────────────────────────────────────────────────────────────────┘
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### 技术栈
@@ -452,45 +491,6 @@ return go_products[:count]
 | $6.99 | ¥10.0 | ¥25.27 | ¥13.5 | ¥11.77 | GO |
 | $4.99 | ¥8.0 | ¥17.96 | ¥11.5 | ¥6.46 | MARGINAL |
 | $2.99 | ¥6.0 | ¥10.79 | ¥9.5 | ¥1.29 | PASS |
-
----
-
-## 📝 开发说明
-
-### 依赖安装
-
-```bash
-# 安装核心依赖
-pip install fastapi uvicorn requests beautifulsoup4 -i https://pypi.org/simple/
-```
-
-### 环境要求
-
-- Python 3.9+
-- 现代浏览器（支持 SSE）
-- 网络连接（用于真实爬取）
-
-### Mock 数据说明
-
-Mock 数据用于开发和测试，真实爬取失败时自动降级。Mock 数据已优化价格，确保核价能通过。
-
----
-
-## 🎯 快速开始
-
-```bash
-# 1. 克隆项目
-git clone https://github.com/zhuhongyin/global-ecom-skills.git
-
-# 2. 进入目录
-cd lgskill3
-
-# 3. 安装依赖并启动
-./start.sh
-
-# 4. 打开浏览器
-open http://localhost:5000
-```
 
 ---
 
