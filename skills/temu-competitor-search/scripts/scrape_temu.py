@@ -356,17 +356,20 @@ class TemuCompetitorScraper:
             "quality_level": quality_level
         }
     
-    def scrape_real_data(self, keyword: str, limit: int = 20, sort: str = "price_asc") -> List[TemuProduct]:
+    def scrape_real_data(self, keyword: str, limit: int = 20, sort: str = "price_asc", silent: bool = False) -> List[TemuProduct]:
         if not HAS_REQUESTS:
-            print("requests/beautifulsoup4 not available, falling back to mock data")
+            if not silent:
+                print("requests/beautifulsoup4 not available, falling back to mock data")
             return []
         
         url = self.get_search_url(keyword, sort)
-        print(f"Fetching: {url}")
+        if not silent:
+            print(f"Fetching: {url}")
         
         html = self._fetch_page(url)
         if not html:
-            print("Failed to fetch page, falling back to mock data")
+            if not silent:
+                print("Failed to fetch page, falling back to mock data")
             return []
         
         try:
@@ -378,7 +381,8 @@ class TemuCompetitorScraper:
             if not cards:
                 cards = soup.find_all('div', attrs={'data-id': True})
             
-            print(f"Found {len(cards)} product cards")
+            if not silent:
+                print(f"Found {len(cards)} product cards")
             
             for rank, card in enumerate(cards[:limit * 2], 1):
                 product = self._parse_product_card(card, rank)
@@ -390,7 +394,8 @@ class TemuCompetitorScraper:
             return products
             
         except Exception as e:
-            print(f"Error parsing HTML: {e}")
+            if not silent:
+                print(f"Error parsing HTML: {e}")
             return []
     
     def generate_mock_data(self, keyword: str, limit: int = 20) -> TemuSearchResult:
@@ -726,15 +731,17 @@ def main():
     
     scraper = TemuCompetitorScraper(site=args.site)
     
+    silent = args.format == "json"
     result = None
     
     if not args.mock:
-        products = scraper.scrape_real_data(args.keyword, args.limit, args.sort)
+        products = scraper.scrape_real_data(args.keyword, args.limit, args.sort, silent)
         if products:
             result = scraper.build_result_from_products(args.keyword, products)
     
     if not result:
-        print("Using mock data as fallback...")
+        if not silent:
+            print("Using mock data as fallback...")
         result = scraper.generate_mock_data(keyword=args.keyword, limit=args.limit)
     
     output = format_output(result, args.format)
@@ -742,7 +749,8 @@ def main():
     if args.output:
         with open(args.output, 'w', encoding='utf-8') as f:
             f.write(output)
-        print(f"Results saved to {args.output}")
+        if not silent:
+            print(f"Results saved to {args.output}")
     else:
         print(output)
 

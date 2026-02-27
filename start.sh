@@ -133,8 +133,8 @@ setup_venv() {
     source "$SCRIPT_DIR/venv/bin/activate"
     
     print_step "安装 Python 依赖..."
-    pip install flask flask-cors --quiet 2>/dev/null || \
-    pip install flask flask-cors --quiet --user 2>/dev/null
+    pip install fastapi uvicorn requests beautifulsoup4 -i https://pypi.org/simple/ --quiet 2>/dev/null || \
+    pip install fastapi uvicorn requests beautifulsoup4 --quiet 2>/dev/null
 }
 
 start_server() {

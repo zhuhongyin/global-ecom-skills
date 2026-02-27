@@ -11,7 +11,7 @@ python3 --version
 
 echo ""
 echo "2. 安装依赖..."
-pip3 install flask flask-cors --quiet 2>/dev/null
+pip3 install fastapi uvicorn requests beautifulsoup4 -i https://pypi.org/simple/ --quiet 2>/dev/null
 
 echo ""
 echo "3. 启动 API 服务..."
