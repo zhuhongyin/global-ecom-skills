@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========================================
-# 跨境电商选品工具 - 一键启动脚本
+# 跨境电商选品工具 - Skills 管理脚本
 # ==========================================
 
 set -e
@@ -41,7 +41,7 @@ check_python() {
     elif command -v python &> /dev/null; then
         PYTHON_CMD="python"
     else
-        print_error "Python 未安装，请先安装 Python 3.8+"
+        print_error "Python 未安装，请先安装 Python 3.9+"
         exit 1
     fi
     
@@ -80,7 +80,6 @@ install_skills() {
         "amazon-movers-shakers"
         "temu-competitor-search"
         "ali1688-sourcing"
-        "ecom-product-orchestrator"
     )
     
     MISSING_SKILLS=()
@@ -131,85 +130,109 @@ setup_venv() {
     fi
     
     source "$SCRIPT_DIR/venv/bin/activate"
+    print_step "虚拟环境已激活"
+}
+
+install_dependencies() {
+    echo ""
+    echo -e "${BLUE}→ 检查 Python 依赖...${NC}"
     
     print_step "安装 Python 依赖..."
-    pip install fastapi uvicorn requests beautifulsoup4 -i https://pypi.org/simple/ --quiet 2>/dev/null || \
-    pip install fastapi uvicorn requests beautifulsoup4 --quiet 2>/dev/null
-}
-
-start_server() {
-    echo ""
-    echo -e "${BLUE}→ 启动服务...${NC}"
-    echo ""
-    echo -e "${GREEN}=========================================="
-    echo -e "  服务已启动"
-    echo -e "==========================================${NC}"
-    echo ""
-    echo -e "  前端地址: ${YELLOW}http://localhost:5000${NC}"
-    echo -e "  API 文档: ${YELLOW}http://localhost:5000/api/health${NC}"
-    echo ""
-    echo -e "  按 ${RED}Ctrl+C${NC} 停止服务"
-    echo ""
-    echo -e "${GREEN}==========================================${NC}"
-    echo ""
+    pip install requests beautifulsoup4 -i https://pypi.org/simple/ --quiet 2>/dev/null || \
+    pip install requests beautifulsoup4 --quiet 2>/dev/null
     
-    $PYTHON_CMD frontend/api_server.py
+    print_step "依赖安装完成"
 }
 
-show_help() {
+show_usage() {
     echo ""
     echo "用法: ./start.sh [选项]"
     echo ""
     echo "选项:"
     echo "  --install-skills    安装 Skills 到 Claude Code"
-    echo "  --skip-skills       跳过 Skills 检查"
+    echo "  --install-deps      安装 Python 依赖"
     echo "  --help              显示帮助信息"
     echo ""
     echo "示例:"
-    echo "  ./start.sh                  # 正常启动"
+    echo "  ./start.sh                  # 检查并安装所有依赖"
     echo "  ./start.sh --install-skills # 强制安装 Skills"
-    echo "  ./start.sh --skip-skills    # 跳过 Skills 检查"
+    echo "  ./start.sh --install-deps   # 仅安装 Python 依赖"
+    echo ""
+}
+
+show_examples() {
+    echo ""
+    echo -e "${GREEN}=========================================="
+    echo -e "  使用示例"
+    echo -e "==========================================${NC}"
+    echo ""
+    echo "注意：使用前请先激活虚拟环境"
+    echo -e "   ${YELLOW}source venv/bin/activate${NC}"
+    echo ""
+    echo "1. Amazon 飙升榜爬取:"
+    echo -e "   ${YELLOW}python3 skills/amazon-movers-shakers/scripts/scrape_amazon.py --site us --category home-garden --limit 10${NC}"
+    echo ""
+    echo "2. Temu 竞品分析:"
+    echo -e "   ${YELLOW}python3 skills/temu-competitor-search/scripts/scrape_temu.py --keyword \"Standing Desk\" --limit 10${NC}"
+    echo ""
+    echo "3. 1688 供应链查询:"
+    echo -e "   ${YELLOW}python3 skills/ali1688-sourcing/scripts/scrape_1688.py --keyword \"Standing Desk\" --limit 10${NC}"
+    echo ""
+    echo "4. V4.1 核价计算:"
+    echo -e "   ${YELLOW}python3 skills/temu-pricing-calculator/scripts/calculate_pricing.py --temu-price 29.99 --ali1688-price 20.0${NC}"
+    echo ""
+    echo -e "${GREEN}==========================================${NC}"
     echo ""
 }
 
 main() {
     print_header
     
-    SKIP_SKILLS=false
-    FORCE_INSTALL=false
+    INSTALL_SKILLS=false
+    INSTALL_DEPS=false
     
     for arg in "$@"; do
         case $arg in
             --help|-h)
-                show_help
+                show_usage
+                show_examples
                 exit 0
                 ;;
             --install-skills)
-                FORCE_INSTALL=true
+                INSTALL_SKILLS=true
                 ;;
-            --skip-skills)
-                SKIP_SKILLS=true
+            --install-deps)
+                INSTALL_DEPS=true
                 ;;
         esac
     done
     
     check_python
+    setup_venv
     
-    if [ "$SKIP_SKILLS" = false ]; then
-        check_node
-        if [ "$FORCE_INSTALL" = true ]; then
-            echo ""
-            echo -e "${BLUE}→ 强制安装 Skills...${NC}"
-            if check_npx; then
-                npx skills add zhuhongyin/global-ecom-skills --skill '*' -a claude-code -y
-            fi
-        else
-            install_skills
+    if [ "$INSTALL_SKILLS" = true ]; then
+        echo ""
+        echo -e "${BLUE}→ 强制安装 Skills...${NC}"
+        if check_npx; then
+            npx skills add zhuhongyin/global-ecom-skills --skill '*' -a claude-code -y
         fi
+    else
+        check_node
+        install_skills
     fi
     
-    setup_venv
-    start_server
+    if [ "$INSTALL_DEPS" = true ]; then
+        install_dependencies
+    else
+        install_dependencies
+    fi
+    
+    echo ""
+    echo -e "${GREEN}=========================================="
+    echo -e "  准备完成"
+    echo -e "==========================================${NC}"
+    echo ""
+    show_examples
 }
 
 main "$@"
