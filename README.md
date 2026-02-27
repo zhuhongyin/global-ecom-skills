@@ -10,7 +10,48 @@ This repository helps Chinese factories and sellers find **products that sell ex
 
 No complicated requirements, no expensive setup — just simple, proven skills to grow your global business.
 
-## 安装方式
+## 快速开始
+
+### 方式一：一键启动（推荐）
+
+```bash
+# 克隆仓库
+git clone https://github.com/zhuhongyin/global-ecom-skills.git
+cd global-ecom-skills
+
+# 添加执行权限
+chmod +x start.sh
+
+# 一键启动（自动检查环境、安装 Skills、启动服务）
+./start.sh
+```
+
+启动后打开浏览器访问：http://localhost:5000
+
+### 方式二：手动启动
+
+```bash
+# 1. 创建虚拟环境
+python3 -m venv venv
+source venv/bin/activate
+
+# 2. 安装依赖
+pip install flask flask-cors
+
+# 3. 启动服务
+python frontend/api_server.py
+```
+
+### 启动脚本选项
+
+```bash
+./start.sh                  # 正常启动
+./start.sh --install-skills # 强制安装 Skills
+./start.sh --skip-skills    # 跳过 Skills 检查
+./start.sh --help           # 显示帮助
+```
+
+## 安装 Skills 到 Claude Code
 
 ```bash
 # 一行命令安装所有 skills（推荐）
@@ -39,6 +80,35 @@ npx skills add zhuhongyin/global-ecom-skills -a claude-code
 - High-converting, low-competition product ideas
 - Easy-to-use, beginner-friendly systems
 - Data-driven strategies for maximum profit
+
+## 前端演示界面
+
+本项目提供可视化前端界面，方便测试和使用 Skills：
+
+| 功能 | 说明 |
+|------|------|
+| 核价计算器 | 输入 Temu 卷王价和 1688 拿货价，计算净利润 |
+| 选品流程 | 自动执行完整选品流程，获取真实数据 |
+| 选品报告 | 生成 5 款推荐产品报告，支持导出 JSON |
+| 历史记录 | 保存所有操作记录 |
+
+**技术架构：**
+```
+前端 (HTML/JS)  →  Flask API  →  本地 Skills 脚本
+    ↓                  ↓                ↓
+  用户界面         REST API 服务     真实数据获取
+```
+
+**API 端点：**
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/api/health` | GET | 健康检查 |
+| `/api/pricing/calculate` | POST | V4.1 核价计算 |
+| `/api/amazon/movers-shakers` | GET | 亚马逊飙升榜 |
+| `/api/temu/competitors` | GET | Temu 竞品查询 |
+| `/api/1688/sourcing` | GET | 1688 供应链 |
+| `/api/workflow/run` | POST | 完整选品流程 |
+| `/api/report/generate` | POST | 生成选品报告 |
 
 ## Skills 列表
 
