@@ -399,58 +399,33 @@ class TemuCompetitorScraper:
             return []
     
     def generate_mock_data(self, keyword: str, limit: int = 20) -> TemuSearchResult:
-        mock_products = [
-            {
-                "title": f"Height Adjustable Standing Desk Converter {keyword}",
-                "price": 29.99,
-                "original_price": 59.99,
-                "discount": "50% off",
-                "rating": 3.8,
-                "review_count": 456,
-                "sold_count": "1k+",
-                "seller": "Factory Direct",
-            },
-            {
-                "title": f"Premium {keyword} with Ergonomic Design",
-                "price": 45.99,
-                "original_price": 89.99,
-                "discount": "49% off",
-                "rating": 4.2,
-                "review_count": 234,
-                "sold_count": "500+",
-                "seller": "Office Pro Store",
-            },
-            {
-                "title": f"Budget {keyword} Basic Model",
-                "price": 19.99,
-                "original_price": 39.99,
-                "discount": "50% off",
-                "rating": 3.5,
-                "review_count": 789,
-                "sold_count": "2k+",
-                "seller": "Discount Hub",
-            },
-            {
-                "title": f"{keyword} Complete Set Bundle",
-                "price": 59.99,
-                "original_price": 119.99,
-                "discount": "50% off",
-                "rating": 4.5,
-                "review_count": 123,
-                "sold_count": "300+",
-                "seller": "Bundle King",
-            },
-            {
-                "title": f"Deluxe {keyword} with Accessories",
-                "price": 79.99,
-                "original_price": 159.99,
-                "discount": "50% off",
-                "rating": 4.7,
-                "review_count": 89,
-                "sold_count": "200+",
-                "seller": "Premium Store",
-            },
-        ]
+        category_pricing = {
+            "home-garden": {"min": 15.99, "max": 45.99},
+            "electronics": {"min": 8.99, "max": 29.99},
+            "sports": {"min": 12.99, "max": 35.99},
+            "office": {"min": 18.99, "max": 49.99},
+            "beauty": {"min": 9.99, "max": 25.99},
+            "toys": {"min": 7.99, "max": 19.99},
+            "clothing": {"min": 11.99, "max": 29.99},
+            "jewelry": {"min": 14.99, "max": 39.99},
+            "automotive": {"min": 16.99, "max": 44.99},
+            "pet-supplies": {"min": 10.99, "max": 28.99}
+        }
+        
+        mock_products = []
+        for i in range(limit):
+            base_price = 19.99 + (i * 3)
+            discount = f"{40 + (i % 20)}% off"
+            mock_products.append({
+                "title": f"Product {keyword} #{i+1}",
+                "price": round(base_price * (0.8 + (i % 5) * 0.05), 2),
+                "original_price": round(base_price * 1.5, 2),
+                "discount": discount,
+                "rating": round(3.5 + (i % 3) * 0.3, 1),
+                "review_count": 100 + (i * 50),
+                "sold_count": f"{(i+1)*100}+",
+                "seller": f"Store {i+1}"
+            })
         
         competitors = []
         prices = []

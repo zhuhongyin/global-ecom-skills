@@ -97,6 +97,12 @@ CATEGORY_URLS = {
     "electronics": "/Best-Sellers-Electronics/zgbs/electronics",
     "sports": "/Best-Sellers-Sports-Outdoors/zgbs/sporting-goods",
     "office": "/Best-Sellers-Office-Products/zgbs/office-products",
+    "beauty": "/Best-Sellers-Beauty/zgbs/beauty",
+    "toys": "/Best-Sellers-Toys-Games/zgbs/toys-and-games",
+    "clothing": "/Best-Sellers-Clothing/zgbs/apparel",
+    "jewelry": "/Best-Sellers-Jewelry/zgbs/jewelry",
+    "automotive": "/Best-Sellers-Automotive/zgbs/automotive",
+    "pet-supplies": "/Best-Sellers-Pet-Supplies/zgbs/pet-supplies"
 }
 
 USER_AGENTS = [
