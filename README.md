@@ -13,13 +13,17 @@
 git clone https://github.com/zhuhongyin/global-ecom-skills.git
 
 # 2. 进入目录
-cd lgskill3
+cd global-ecom-skills
 
 # 3. 安装依赖
-pip install requests beautifulsoup4 -i https://pypi.org/simple/
+./start.sh
 
-# 4. 使用 Skills
-python3 skills/amazon-movers-shakers/scripts/scrape_amazon.py --site us --category home-garden --limit 10
+# 使用claude 进行测试 跨境电商选品智能体
+claude
+用跨境电商选品智能体skill挑选3款产品
+
+# 4. 单独使用 Skills
+python3 skills/amazon-movers-shakers/scripts/scrape_amazon.py --site us --category home-garden --limit 5
 ```
 
 ---
