@@ -111,6 +111,20 @@
         .history-table th { background: var(--gray-50); font-weight: 600; }
         .history-table tr:hover { background: var(--gray-50); }
         .loading { text-align: center; padding: 40px; color: var(--gray-600); }
+        .loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--gray-200);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { font-size: 16px; margin-bottom: 8px; }
+        .loading-step { font-size: 14px; color: var(--gray-600); margin: 4px 0; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .formula-box {
             background: #1e293b;
             color: #e2e8f0;
@@ -272,7 +286,7 @@
                 </div>
             </div>
             
-            <button class="btn btn-primary" onclick="runWorkflow()">开始选品流程</button>
+            <button class="btn btn-primary" id="workflowBtn" onclick="runWorkflow()">开始选品流程</button>
             <div id="workflowResult" style="margin-top: 20px;"></div>
         </div>
         
@@ -405,7 +419,31 @@
             const count = parseInt(document.getElementById('productCount').value);
             
             const resultEl = document.getElementById('workflowResult');
-            resultEl.innerHTML = '<div class="loading">正在执行选品流程（调用真实 Skills）...</div>';
+            const btn = document.getElementById('workflowBtn');
+            
+            btn.disabled = true;
+            btn.textContent = '执行中...';
+            
+            resultEl.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">正在执行选品流程...</div>
+                    <div class="loading-step" id="loadingStep1">Step 1: 获取亚马逊飙升榜数据</div>
+                    <div class="loading-step" id="loadingStep2">Step 2: 查询 Temu 竞品价格</div>
+                    <div class="loading-step" id="loadingStep3">Step 3: 查询 1688 供应链</div>
+                    <div class="loading-step" id="loadingStep4">Step 4: V4.1 核价计算</div>
+                </div>
+            `;
+            
+            const steps = ['loadingStep1', 'loadingStep2', 'loadingStep3', 'loadingStep4'];
+            let currentStep = 0;
+            const stepInterval = setInterval(() => {
+                if (currentStep < steps.length) {
+                    document.getElementById(steps[currentStep]).style.color = 'var(--primary)';
+                    document.getElementById(steps[currentStep]).textContent = document.getElementById(steps[currentStep]).textContent.replace('Step', 'Running Step');
+                    currentStep++;
+                }
+            }, 2000);
             
             try {
                 const response = await fetch(`${API_BASE}/workflow/run`, {
@@ -415,6 +453,8 @@
                 });
                 
                 const data = await response.json();
+                
+                clearInterval(stepInterval);
                 
                 if (data.error) throw new Error(data.error);
                 
@@ -430,7 +470,11 @@
                 
             } catch (error) {
                 console.error('API Error:', error);
+                clearInterval(stepInterval);
                 resultEl.innerHTML = '<div class="result-card"><h3>API 连接失败</h3><p style="color: var(--danger);">请确保后端服务已启动:</p><code style="background: var(--gray-100); padding: 10px; display: block; border-radius: 4px;">python frontend/api_server.py</code></div>';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '开始选品流程';
             }
         }
         

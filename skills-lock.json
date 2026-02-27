@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "skills": {
+    "ali1688-sourcing": {
+      "source": "zhuhongyin/global-ecom-skills",
+      "sourceType": "github",
+      "computedHash": "34b8ddf12bdaa9c857cb2869703c24d5e79d9647e7269673aa5e8abf1c5bf7f9"
+    },
+    "amazon-movers-shakers": {
+      "source": "zhuhongyin/global-ecom-skills",
+      "sourceType": "github",
+      "computedHash": "cb1faf055de0aa2bc1100111ca5b144e922966a04e03881bdd166289d39619f8"
+    },
+    "ecom-product-orchestrator": {
+      "source": "zhuhongyin/global-ecom-skills",
+      "sourceType": "github",
+      "computedHash": "e6d081dde4abe3db2eb849fe9dbe4e562d2a46694c22ed0eedd64fb62827bbae"
+    },
+    "temu-competitor-search": {
+      "source": "zhuhongyin/global-ecom-skills",
+      "sourceType": "github",
+      "computedHash": "3cf05c2f3610b6d06df0bb820aa23d21d52600753a9304ebcfbaaee48bbb4b53"
+    },
+    "temu-pricing-calculator": {
+      "source": "zhuhongyin/global-ecom-skills",
+      "sourceType": "github",
+      "computedHash": "7e54cb3594088d30edda6fdbea9ea60602592bf97d46a9d55270e39881bf535f"
+    }
+  }
+}
