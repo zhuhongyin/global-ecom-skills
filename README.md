@@ -326,6 +326,7 @@ lgskill3/
 | `GET /api/health` | 健康检查 |
 | `GET /api/amazon/movers-shakers` | Amazon 飙升榜数据 |
 | `GET /api/temu/competitors` | Temu 竞品数据 |
+| `GET /api/4supply/sourcing` | 4supply 平台数据 |
 | `GET /api/1688/sourcing` | 1688 供应链数据 |
 | `POST /api/pricing/calculate` | 单独核价计算 |
 | `POST /api/workflow/stream` | SSE 选品流程（实时推送） |
@@ -446,13 +447,19 @@ python3 skills/ali1688-sourcing/scripts/scrape_1688.py \
 │  ├─ 获取 Top 5 竞品列表                           │
 │  └─ 返回竞品数据（价格/评分/销量）                    │
 │                                                         │
-│  Step 3: 1688 供应链查询（对每个候选产品）          │
+│  Step 3: 4supply 平台洞察（对每个候选产品）       │
+│  ├─ 用相同关键词搜索 4supply                         │
+│  ├─ 获取市场状态（蓝海/有空间/红海）                 │
+│  ├─ 获取价格区间和机会分析                        │
+│  └─ 返回平台数据（市场状态/平均价格/机会评分）         │
+│                                                         │
+│  Step 4: 1688 供应链查询（对每个候选产品）          │
 │  ├─ 用相同关键词搜索 1688                             │
 │  ├─ 获取工厂批发价（阶梯价）                           │
 │  ├─ 获取工厂信息（认证/位置/评分）                   │
 │  └─ 返回供应链数据（最低价/推荐价）                │
 │                                                         │
-│  Step 4: V4.1 核价计算（对每个候选产品）          │
+│  Step 5: V4.1 核价计算（对每个候选产品）          │
 │  ├─ 输入：Temu 卷王价 + 1688 批发价                    │
 │  ├─ 计算：回款 = 卷王价 × 45% × 7.2                  │
 │  ├─ 计算：总成本 = 批发价 + ¥3.5                    │
@@ -481,11 +488,15 @@ for each candidate_product in amazon_products[:count * 2]:
     temu_data = search_temu(keyword)
     king_price = temu_data.king_price.price
     
-    # Step 3: 1688 供应链查询
+    # Step 3: 4supply 平台洞察
+    supply4_data = search_4supply(keyword)
+    market_status = supply4_data.opportunity_analysis.market_status
+    
+    # Step 4: 1688 供应链查询
     ali1688_data = search_1688(keyword)
     ali1688_price = ali1688_data.wholesale_price.recommended_price
     
-    # Step 4: V4.1 核价计算
+    # Step 5: V4.1 核价计算
     pricing_data = calculate_pricing(
         temu_price=king_price,
         ali1688_price=ali1688_price,
@@ -496,6 +507,7 @@ for each candidate_product in amazon_products[:count * 2]:
         go_products.append({
             amazon: candidate_product,
             temu: temu_data,
+            supply4: supply4_data,
             ali1688: ali1688_data,
             pricing: pricing_data
         })
@@ -518,5 +530,16 @@ return go_products[:count]
 
 ---
 
-**文档版本**：v1.0  
-**最后更新**：2026-02-27
+**文档版本**：v1.1  
+**最后更新**：2026-03-03
+
+### 更新日志
+
+**v1.1 (2026-03-03)**
+- ✅ 新增 4supply 平台洞察 skill
+- ✅ 工作流从 4 步扩展为 5 步
+- ✅ 前端界面支持 4supply 数据展示
+- ✅ API 新增 `/api/4supply/sourcing` 端点
+
+**v1.0 (2026-02-27)**
+- 初始版本发布
