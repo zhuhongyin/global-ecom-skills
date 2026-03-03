@@ -171,6 +171,22 @@ async def get_1688_sourcing(keyword: str, limit: int = 20):
     except json.JSONDecodeError:
         return {"raw_output": output}
 
+@app.get("/api/4supply/sourcing")
+async def get_4supply_sourcing(keyword: str, limit: int = 20):
+    if not keyword:
+        return JSONResponse({"error": "keyword is required"}, status_code=400)
+    
+    args = ['--keyword', keyword, '--limit', str(limit), '--format', 'json']
+    output, error = await run_script_async('4supply-sourcing', 'scrape_4supply.py', args)
+    
+    if error:
+        return JSONResponse({"error": error}, status_code=500)
+    
+    try:
+        return json.loads(output)
+    except json.JSONDecodeError:
+        return {"raw_output": output}
+
 @app.post("/api/workflow/stream")
 async def workflow_stream(request: Request):
     data = await request.json()
@@ -192,7 +208,7 @@ async def workflow_stream(request: Request):
             'total_candidates_processed': 0,
         }
         
-        yield sse_event('start', {'message': '开始选品流程', 'total_steps': 4})
+        yield sse_event('start', {'message': '开始选品流程', 'total_steps': 5})
         
         await asyncio.sleep(0.1)
         yield sse_event('progress', {'step': 1, 'status': 'running', 'message': '步骤 1：获取亚马逊飙升榜数据'})
@@ -229,6 +245,7 @@ async def workflow_stream(request: Request):
             product_result = {
                 'amazon': product,
                 'temu': None,
+                'supply4': None,
                 'ali1688': None,
                 'pricing': None
             }
@@ -255,7 +272,24 @@ async def workflow_stream(request: Request):
                     yield sse_event('progress', {
                         'step': 3, 
                         'status': 'running', 
-                        'message': f'步骤 3：查询 1688 供应链 ({i+1}/{len(products)}) - {keyword[:20]}…'
+                        'message': f'步骤 3：查询 4supply 平台 ({i+1}/{len(products)}) - {keyword[:20]}…'
+                    })
+                    
+                    supply4_args = ['--keyword', keyword, '--limit', '5', '--format', 'json']
+                    output_supply4, error_supply4 = await run_script_async('4supply-sourcing', 'scrape_4supply.py', supply4_args)
+                    
+                    if not error_supply4:
+                        try:
+                            supply4_data = json.loads(output_supply4)
+                            product_result['supply4'] = supply4_data
+                        except Exception as e:
+                            pass
+                    
+                    await asyncio.sleep(0.1)
+                    yield sse_event('progress', {
+                        'step': 4, 
+                        'status': 'running', 
+                        'message': f'步骤 4：查询 1688 供应链 ({i+1}/{len(products)}) - {keyword[:20]}…'
                     })
                     
                     ali1688_args = ['--keyword', keyword, '--limit', '5', '--format', 'json']
@@ -282,9 +316,9 @@ async def workflow_stream(request: Request):
                             
                             await asyncio.sleep(0.1)
                             yield sse_event('progress', {
-                                'step': 4, 
+                                'step': 5, 
                                 'status': 'running', 
-                                'message': f'步骤 4：V4.1 核价计算 ({i+1}/{len(products)})'
+                                'message': f'步骤 5：V4.1 核价计算 ({i+1}/{len(products)})'
                             })
                             
                             pricing_args = [
@@ -322,7 +356,7 @@ async def workflow_stream(request: Request):
             
             if processed_count % 2 == 0:
                 yield sse_event('progress', {
-                    'step': 4, 
+                    'step': 5, 
                     'status': 'running', 
                     'message': f'已处理 {processed_count}/{len(products)} 款候选'
                 })
@@ -330,7 +364,7 @@ async def workflow_stream(request: Request):
         workflow_result['total_candidates_processed'] = processed_count
         go_count = len(workflow_result['products'])
         
-        yield sse_event('progress', {'step': 4, 'status': 'done', 'message': f'步骤 4 完成：共推荐 {go_count} 款（已通过核价）'})
+        yield sse_event('progress', {'step': 5, 'status': 'done', 'message': f'步骤 5 完成：共推荐 {go_count} 款（已通过核价）'})
         
         yield sse_event('complete', workflow_result)
     
@@ -506,6 +540,7 @@ if __name__ == '__main__':
     print("  - GET  /api/amazon/movers-shakers")
     print("  - GET  /api/temu/competitors")
     print("  - GET  /api/1688/sourcing")
+    print("  - GET  /api/4supply/sourcing")
     print("  - POST /api/workflow/stream  (SSE)")
     print("  - POST /api/report/generate")
     print("")

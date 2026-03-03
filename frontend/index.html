@@ -172,7 +172,7 @@
     <header>
         <div class="container">
             <h1>跨境电商选品工具</h1>
-            <p>Global E-Commerce Skills - V4.1 核价模型 | FastAPI + SSE 实时推送</p>
+            <p>Global E-Commerce Skills - V4.2 核价模型 | FastAPI + SSE 实时推送 | 支持 Temu & 4supply 双平台</p>
         </div>
     </header>
     
@@ -275,13 +275,18 @@
                 </div>
                 <div class="workflow-step" id="step3">
                     <span class="step-number">3</span>
-                    <h4>1688 供应链</h4>
+                    <h4>4supply 平台</h4>
                     <p id="step3Status">等待开始</p>
                 </div>
                 <div class="workflow-step" id="step4">
                     <span class="step-number">4</span>
-                    <h4>V4.1 核价</h4>
+                    <h4>1688 供应链</h4>
                     <p id="step4Status">等待开始</p>
+                </div>
+                <div class="workflow-step" id="step5">
+                    <span class="step-number">5</span>
+                    <h4>V4.1 核价</h4>
+                    <p id="step5Status">等待开始</p>
                 </div>
             </div>
             
@@ -481,7 +486,7 @@
         }
         
         function resetSteps() {
-            for (let i = 1; i <= 4; i++) {
+            for (let i = 1; i <= 5; i++) {
                 document.getElementById(`step${i}`).className = 'workflow-step';
                 document.getElementById(`step${i}Status`).textContent = '等待开始';
             }
@@ -618,7 +623,7 @@
                     updateProgress(100);
                     document.getElementById('progressText').textContent = '完成!';
                     
-                    for (let i = 1; i <= 4; i++) {
+                    for (let i = 1; i <= 5; i++) {
                         if (document.getElementById(`step${i}`).className.includes('active')) {
                             updateStep(i, 'done', '完成');
                         }
@@ -650,12 +655,15 @@
                 products.forEach((p, idx) => {
                     const amazon = p.amazon || {};
                     const temu = p.temu || {};
+                    const supply4 = p.supply4 || {};
                     const pricing = p.pricing || {};
                     const title = amazon.title || '未知商品';
                     const status = statusText(pricing.decision?.status);
                     const amazonPrice = amazon.price != null ? ('$' + Number(amazon.price).toFixed(2)) : '—';
                     const kingPrice = temu.king_price?.price != null ? ('$' + Number(temu.king_price.price).toFixed(2)) : '—';
                     const netProfit = pricing.calculation?.net_profit != null ? ('¥' + Number(pricing.calculation.net_profit).toFixed(2)) : '—';
+                    const supply4Price = supply4.summary?.average_price != null ? ('$' + Number(supply4.summary.average_price).toFixed(2)) : '—';
+                    const supply4Status = supply4.opportunity_analysis?.market_status || '—';
                     
                     html += '<div class="product-card">';
                     html += '<h4><span class="priority-badge priority-high">' + (idx + 1) + '</span><span class="product-title">' + escapeHtml(title) + '</span><span class="priority-badge priority-high">' + status + '</span></h4>';
@@ -665,6 +673,10 @@
                     html += '</div>';
                     html += '<div class="product-section"><h5>Temu 竞品</h5>';
                     html += '<div class="result-row"><span class="result-label">卷王价</span><span class="result-value">' + kingPrice + '</span></div>';
+                    html += '</div>';
+                    html += '<div class="product-section"><h5>4supply 平台</h5>';
+                    html += '<div class="result-row"><span class="result-label">市场状态</span><span class="result-value">' + supply4Status + '</span></div>';
+                    html += '<div class="result-row"><span class="result-label">平均价格</span><span class="result-value">' + supply4Price + '</span></div>';
                     html += '</div>';
                     html += '<div class="product-section"><h5>利润分析（V4.1）</h5>';
                     html += '<div class="result-row"><span class="result-label">净利润</span><span class="result-value" style="color: var(--success); font-weight: 700;">' + netProfit + '</span></div>';
