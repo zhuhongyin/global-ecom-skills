@@ -46,6 +46,15 @@ else
     PYTHON_CMD="python"
 fi
 
+VENV_PATH="$SCRIPT_DIR/venv"
+if [ -d "$VENV_PATH" ]; then
+    echo -e "${BLUE}→ 激活虚拟环境...${NC}"
+    source "$VENV_PATH/bin/activate"
+    echo -e "${GREEN}[✓] 虚拟环境已激活${NC}"
+else
+    echo -e "${YELLOW}[!] 未找到虚拟环境，使用系统 Python${NC}"
+fi
+
 echo -e "${BLUE}→ 启动 API 服务...${NC}"
 echo -e "  前端: ${GREEN}http://localhost:5000${NC}"
 echo -e "  按 ${RED}Ctrl+C${NC} 停止"
