@@ -57,8 +57,8 @@ class TemuPricingCalculator:
             gross_revenue_cny = gross_revenue_usd * self.exchange_rate
         else:
             temu_price_cny = data.temu_price
-            gross_revenue_usd = data.temu_price / self.exchange_rate
             gross_revenue_cny = data.temu_price * self.platform_rate
+            gross_revenue_usd = gross_revenue_cny / self.exchange_rate
         
         total_cost = data.ali1688_price + self.fulfillment_fee
         net_profit = gross_revenue_cny - total_cost

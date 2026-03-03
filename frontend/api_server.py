@@ -274,7 +274,7 @@ async def workflow_stream(request: Request):
                                     ali1688_price = p0.get('starting_price')
                                     if ali1688_price is None and p0.get('price_tiers'):
                                         tiers = p0['price_tiers']
-                                        ali1688_price = tiers[-1].get('price', 0) if tiers else 0
+                                        ali1688_price = tiers[0].get('price', 0) if tiers else 0
                                 if ali1688_price is None:
                                     ali1688_price = ali1688_data.get('wholesale_price', {}).get('recommended_price', 0)
                             if ali1688_price is None:
@@ -423,7 +423,7 @@ async def generate_report(request: Request):
                 ali1688_price = p0.get('starting_price')
                 if ali1688_price is None and p0.get('price_tiers'):
                     tiers = p0['price_tiers']
-                    ali1688_price = tiers[-1].get('price', 0) if tiers else 0
+                    ali1688_price = tiers[0].get('price', 0) if tiers else 0
             if ali1688_price is None:
                 ali1688_price = ali1688_data.get('wholesale_price', {}).get('recommended_price', 0)
         if ali1688_price is None:
