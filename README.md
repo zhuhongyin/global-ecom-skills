@@ -1,5 +1,23 @@
 # E-Commerce Skills 选品系统 
 
+## 🚀 启动说明
+
+| 方式 | 命令 | 说明 |
+|------|------|------|
+| **带 UI 分支启动** | `./start_ui.sh` | 先拉取 **main-ui** 分支代码，再直接执行 `python frontend/api_server.py` 启动服务 |
+| **当前代码启动** | `./start.sh` | 使用当前分支代码直接启动 |
+
+```bash
+# 带 UI 分支：拉取 main-ui 后启动
+chmod +x start_ui.sh
+./start_ui.sh
+
+# 浏览器访问
+open http://localhost:5000
+```
+
+---
+
 ## 📝 开发说明
 
 ### 依赖安装
@@ -30,8 +48,10 @@ git clone https://github.com/zhuhongyin/global-ecom-skills.git
 # 2. 进入目录
 cd lgskill3
 
-# 3. 安装依赖并启动
-./start.sh
+# 3. 安装依赖并启动（二选一）
+./start_ui.sh   # 拉取 main-ui 分支后启动（推荐）
+# 或
+./start.sh      # 使用当前分支直接启动
 
 # 4. 打开浏览器
 open http://localhost:5000
