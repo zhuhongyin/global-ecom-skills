@@ -69,6 +69,7 @@ open http://localhost:5000
 |---------|------|
 | Amazon 飙升榜数据获取 | 抓取 Amazon 热销产品，发现市场趋势 |
 | Temu 竞品分析 | 分析 Temu 平台竞品价格，确定市场定价上限 |
+| 4supply 平台洞察 | 分析乐歌 B2B 平台市场机会，判断竞争格局 |
 | 1688 供应链查询 | 查询 1688 工厂批发价，确定采购成本 |
 | V4.1 核价计算 | 自动计算净利润，判断产品是否值得做 |
 | SSE 实时推送 | 选品流程实时进度推送，无需等待 |
@@ -127,6 +128,9 @@ lgskill3/
 │   ├── temu-competitor-search/
 │   │   └── scripts/
 │   │       └── scrape_temu.py         # Temu 竞品分析
+│   ├── 4supply-sourcing/
+│   │   └── scripts/
+│   │       └── scrape_4supply.py      # 4supply 平台洞察
 │   ├── ali1688-sourcing/
 │   │   └── scripts/
 │   │       └── scrape_1688.py          # 1688 供应链查询
