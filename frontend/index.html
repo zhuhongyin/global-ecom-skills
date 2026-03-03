@@ -106,12 +106,14 @@
         .workflow-step.active .step-number { background: var(--primary); }
         .workflow-step.done .step-number { background: var(--success); }
         .workflow-step.error .step-number { background: var(--danger); }
-        .product-card { background: white; border: 2px solid var(--gray-200); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-        .product-card h4 { font-size: 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+        .product-card { background: white; border: 2px solid var(--gray-200); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+        .product-card h4 { font-size: 16px; margin-bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; line-height: 1.4; }
+        .product-card h4 .product-title { flex: 1 1 auto; min-width: 0; word-break: break-word; overflow-wrap: break-word; }
         .product-card .priority-badge { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
         .priority-high { background: #dcfce7; color: #166534; }
         .priority-medium { background: #fef3c7; color: #92400e; }
-        .product-section { margin: 16px 0; padding: 16px; background: var(--gray-50); border-radius: 8px; }
+        .product-section { margin: 10px 0; padding: 12px; background: var(--gray-50); border-radius: 8px; }
+        .product-card .product-section:first-of-type { margin-top: 0; }
         .product-section h5 { font-size: 14px; color: var(--gray-600); margin-bottom: 8px; }
         .history-table { width: 100%; border-collapse: collapse; }
         .history-table th, .history-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--gray-200); }
@@ -318,7 +320,7 @@
             </div>
             
             <button class="btn btn-primary" id="workflowBtn" onclick="runWorkflow()">开始选品流程</button>
-            <button class="btn btn-success" onclick="exportWorkflowResult()" style="margin-left: 10px;">导出结果</button>
+            <!-- <button class="btn btn-success" onclick="exportWorkflowResult()" style="margin-left: 10px;">导出结果</button> -->
             
             <div class="progress-container" id="progressContainer" style="display: none;">
                 <div class="progress-bar">
@@ -559,7 +561,7 @@
                         site,
                         category,
                         count,
-                        goCount: workflowResult.products?.filter(p => p.pricing?.decision?.status in ['GO', 'STRONG GO']).length || 0,
+                        goCount: workflowResult.products?.length || 0,
                         timestamp: new Date().toISOString()
                     });
                 }
@@ -627,40 +629,59 @@
         
         function renderWorkflowResult(data) {
             const products = data.products || [];
-            const goProducts = products.filter(p => p.pricing && ['GO', 'STRONG GO'].includes(p.pricing.decision?.status));
+            const totalProcessed = data.total_candidates_processed || 0;
+            const statusText = function(s) {
+                if (s === 'STRONG_GO') return '强烈推荐';
+                if (s === 'GO') return '推荐';
+                if (s === 'MARGINAL') return '边缘';
+                if (s === 'PASS') return '不推荐';
+                return s || '—';
+            };
+            const fmt = (v, unit) => (v != null && v !== '' ? (unit ? unit + v : v) : '—');
             
             let html = '<div class="result-card"><h3>选品结果摘要</h3>';
-            html += '<div class="result-row"><span class="result-label">目标站点</span><span class="result-value">' + (data.metadata?.site || 'N/A') + '</span></div>';
-            html += '<div class="result-row"><span class="result-label">候选产品数</span><span class="result-value">' + products.length + '</span></div>';
-            html += '<div class="result-row"><span class="result-label">通过核价</span><span class="result-value" style="color: var(--success);">' + goProducts.length + ' 款</span></div>';
+            html += '<div class="result-row"><span class="result-label">目标站点</span><span class="result-value">' + (data.metadata?.site || '—') + '</span></div>';
+            html += '<div class="result-row"><span class="result-label">筛选候选数</span><span class="result-value">' + totalProcessed + ' 款</span></div>';
+            html += '<div class="result-row"><span class="result-label">推荐产品数</span><span class="result-value" style="color: var(--success); font-weight: 600;">' + products.length + ' 款（已通过核价）</span></div>';
             html += '</div>';
             
-            if (goProducts.length > 0) {
-                html += '<h3 style="margin-top: 24px;">通过核价的产品</h3>';
-                goProducts.forEach(p => {
+            if (products.length > 0) {
+                html += '<h3 style="margin-top: 24px;">推荐产品（已通过 V4.1 核价）</h3>';
+                products.forEach((p, idx) => {
                     const amazon = p.amazon || {};
                     const temu = p.temu || {};
                     const pricing = p.pricing || {};
+                    const title = amazon.title || '未知商品';
+                    const status = statusText(pricing.decision?.status);
+                    const amazonPrice = amazon.price != null ? ('$' + Number(amazon.price).toFixed(2)) : '—';
+                    const kingPrice = temu.king_price?.price != null ? ('$' + Number(temu.king_price.price).toFixed(2)) : '—';
+                    const netProfit = pricing.calculation?.net_profit != null ? ('¥' + Number(pricing.calculation.net_profit).toFixed(2)) : '—';
                     
                     html += '<div class="product-card">';
-                    html += '<h4>' + (amazon.title?.substring(0, 50) || 'Unknown Product') + ' <span class="priority-badge priority-high">' + (pricing.decision?.status || 'N/A') + '</span></h4>';
+                    html += '<h4><span class="priority-badge priority-high">' + (idx + 1) + '</span><span class="product-title">' + escapeHtml(title) + '</span><span class="priority-badge priority-high">' + status + '</span></h4>';
                     html += '<div class="product-section"><h5>亚马逊数据</h5>';
-                    html += '<div class="result-row"><span class="result-label">ASIN</span><span class="result-value">' + (amazon.asins || 'N/A') + '</span></div>';
-                    html += '<div class="result-row"><span class="result-label">价格</span><span class="result-value">' + (amazon.price || 'N/A') + '</span></div>';
+                    html += '<div class="result-row"><span class="result-label">ASIN</span><span class="result-value">' + (amazon.asins || '—') + '</span></div>';
+                    html += '<div class="result-row"><span class="result-label">亚马逊价格</span><span class="result-value">' + amazonPrice + '</span></div>';
                     html += '</div>';
                     html += '<div class="product-section"><h5>Temu 竞品</h5>';
-                    html += '<div class="result-row"><span class="result-label">卷王价</span><span class="result-value">$' + (temu.king_price?.price || 'N/A') + '</span></div>';
+                    html += '<div class="result-row"><span class="result-label">卷王价</span><span class="result-value">' + kingPrice + '</span></div>';
                     html += '</div>';
-                    html += '<div class="product-section"><h5>利润分析</h5>';
-                    html += '<div class="result-row"><span class="result-label">净利润</span><span class="result-value" style="color: var(--success); font-weight: 700;">¥' + (pricing.calculation?.net_profit?.toFixed(2) || 'N/A') + '</span></div>';
+                    html += '<div class="product-section"><h5>利润分析（V4.1）</h5>';
+                    html += '<div class="result-row"><span class="result-label">净利润</span><span class="result-value" style="color: var(--success); font-weight: 700;">' + netProfit + '</span></div>';
+                    html += '<div class="result-row"><span class="result-label">建议</span><span class="result-value">' + (pricing.decision?.recommendation || '—') + '</span></div>';
                     html += '</div>';
                     html += '</div>';
                 });
             } else {
-                html += '<p style="text-align: center; color: var(--gray-600); margin-top: 20px;">暂无通过核价的产品</p>';
+                html += '<p style="text-align: center; color: var(--gray-600); margin-top: 20px; padding: 24px;">暂无符合条件的产品（利润未达 ¥5 红线）。<br>请调整类目或筛选条件后重试。</p>';
             }
             
             return html;
+        }
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
         
         async function generateReport() {
@@ -702,7 +723,7 @@
             
             const products = report.recommended_products || [];
             products.forEach(p => {
-                const statusClass = p.backend_survival?.profit_analysis?.status === 'GO' ? 'status-go' : 'status-pass';
+                const statusClass = ['GO', 'STRONG_GO'].includes(p.backend_survival?.profit_analysis?.status) ? 'status-go' : 'status-pass';
                 
                 html += '<div class="product-card">';
                 html += '<h4>' + p.product_id + '. ' + p.product_name + ' (' + p.product_name_en + ')</h4>';

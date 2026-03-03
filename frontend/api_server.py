@@ -26,7 +26,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-SCRIPTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'skills')
+# 项目根目录（frontend 的上一级），用于运行 skills 时作为 cwd，确保脚本能正确找到
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+SCRIPTS_DIR = os.path.join(PROJECT_ROOT, 'skills')
 
 SITE_MAPPING = {
     'amazon.com': 'us',
@@ -45,7 +47,8 @@ async def run_script_async(skill_name: str, script_name: str, args: list = None)
         process = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            stderr=asyncio.subprocess.PIPE,
+            cwd=PROJECT_ROOT
         )
         
         try:
@@ -182,15 +185,17 @@ async def workflow_stream(request: Request):
             'metadata': {
                 'site': site,
                 'category': category,
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'requested_count': count,
             },
-            'products': []
+            'products': [],
+            'total_candidates_processed': 0,
         }
         
         yield sse_event('start', {'message': '开始选品流程', 'total_steps': 4})
         
         await asyncio.sleep(0.1)
-        yield sse_event('progress', {'step': 1, 'status': 'running', 'message': 'Step 1: 获取亚马逊飙升榜数据'})
+        yield sse_event('progress', {'step': 1, 'status': 'running', 'message': '步骤 1：获取亚马逊飙升榜数据'})
         
         step1_args = [
             '--site', site_code,
@@ -210,14 +215,14 @@ async def workflow_stream(request: Request):
         try:
             amazon_data = json.loads(output1)
             products = amazon_data.get('products', [])[:count * 2]
-            yield sse_event('progress', {'step': 1, 'status': 'done', 'message': f'Step 1 完成: 获取 {len(products)} 款产品'})
+            yield sse_event('progress', {'step': 1, 'status': 'done', 'message': f'步骤 1 完成：获取 {len(products)} 款候选'})
         except json.JSONDecodeError:
             yield sse_event('progress', {'step': 1, 'status': 'error', 'message': '亚马逊数据解析失败'})
             yield sse_event('complete', {'error': 'Parse error', 'products': []})
             return
         
         await asyncio.sleep(0.1)
-        yield sse_event('progress', {'step': 2, 'status': 'running', 'message': 'Step 2: 查询 Temu 竞品价格'})
+        yield sse_event('progress', {'step': 2, 'status': 'running', 'message': '步骤 2：查询 Temu 竞品价格'})
         
         processed_count = 0
         for i, product in enumerate(products):
@@ -234,7 +239,7 @@ async def workflow_stream(request: Request):
             yield sse_event('progress', {
                 'step': 2, 
                 'status': 'running', 
-                'message': f'Step 2: 查询 Temu 竞品 ({i+1}/{len(products)}) - {keyword[:20]}...'
+                'message': f'步骤 2：查询 Temu 竞品 ({i+1}/{len(products)}) - {keyword[:20]}…'
             })
             
             temu_args = ['--keyword', keyword, '--limit', '5', '--format', 'json']
@@ -250,7 +255,7 @@ async def workflow_stream(request: Request):
                     yield sse_event('progress', {
                         'step': 3, 
                         'status': 'running', 
-                        'message': f'Step 3: 查询 1688 供应链 ({i+1}/{len(products)}) - {keyword[:20]}...'
+                        'message': f'步骤 3：查询 1688 供应链 ({i+1}/{len(products)}) - {keyword[:20]}…'
                     })
                     
                     ali1688_args = ['--keyword', keyword, '--limit', '5', '--format', 'json']
@@ -260,17 +265,26 @@ async def workflow_stream(request: Request):
                         try:
                             ali1688_data = json.loads(output3)
                             product_result['ali1688'] = ali1688_data
-                            factories = ali1688_data.get('factories', [])
-                            if factories and factories[0].get('products'):
-                                ali1688_price = factories[0]['products'][0].get('price', 0)
-                            else:
-                                ali1688_price = ali1688_data.get('wholesale_price', {}).get('recommended_price', 0)
+                            price_calc = ali1688_data.get('price_for_calculator', {})
+                            ali1688_price = price_calc.get('ali1688_price')
+                            if ali1688_price is None:
+                                factories = ali1688_data.get('factories', [])
+                                if factories and factories[0].get('products'):
+                                    p0 = factories[0]['products'][0]
+                                    ali1688_price = p0.get('starting_price')
+                                    if ali1688_price is None and p0.get('price_tiers'):
+                                        tiers = p0['price_tiers']
+                                        ali1688_price = tiers[-1].get('price', 0) if tiers else 0
+                                if ali1688_price is None:
+                                    ali1688_price = ali1688_data.get('wholesale_price', {}).get('recommended_price', 0)
+                            if ali1688_price is None:
+                                ali1688_price = 0
                             
                             await asyncio.sleep(0.1)
                             yield sse_event('progress', {
                                 'step': 4, 
                                 'status': 'running', 
-                                'message': f'Step 4: V4.1 核价计算 ({i+1}/{len(products)})'
+                                'message': f'步骤 4：V4.1 核价计算 ({i+1}/{len(products)})'
                             })
                             
                             pricing_args = [
@@ -286,8 +300,10 @@ async def workflow_stream(request: Request):
                                     product_result['pricing'] = pricing_data
                                     
                                     decision_status = pricing_data.get('decision', {}).get('status', '')
-                                    if decision_status in ['GO', 'STRONG GO']:
+                                    if decision_status in ('GO', 'STRONG_GO'):
                                         net_profit = pricing_data.get('calculation', {}).get('net_profit', 0)
+                                        if len(workflow_result['products']) < count:
+                                            workflow_result['products'].append(product_result)
                                         yield sse_event('product_found', {
                                             'product': product_result,
                                             'message': f"发现通过核价产品: {product.get('title', 'Unknown')[:30]}... 净利润: ¥{net_profit:.2f}"
@@ -299,19 +315,22 @@ async def workflow_stream(request: Request):
                 except Exception as e:
                     pass
             
-            workflow_result['products'].append(product_result)
             processed_count += 1
+            
+            if len(workflow_result['products']) >= count:
+                break
             
             if processed_count % 2 == 0:
                 yield sse_event('progress', {
                     'step': 4, 
                     'status': 'running', 
-                    'message': f'已处理 {processed_count}/{len(products)} 款产品'
+                    'message': f'已处理 {processed_count}/{len(products)} 款候选'
                 })
         
-        go_count = sum(1 for p in workflow_result['products'] if p and p.get('pricing') and p.get('pricing', {}).get('decision', {}).get('status') in ['GO', 'STRONG GO'])
+        workflow_result['total_candidates_processed'] = processed_count
+        go_count = len(workflow_result['products'])
         
-        yield sse_event('progress', {'step': 4, 'status': 'done', 'message': f'Step 4 完成: {go_count} 款产品通过核价'})
+        yield sse_event('progress', {'step': 4, 'status': 'done', 'message': f'步骤 4 完成：共推荐 {go_count} 款（已通过核价）'})
         
         yield sse_event('complete', workflow_result)
     
@@ -395,11 +414,20 @@ async def generate_report(request: Request):
         except json.JSONDecodeError:
             continue
         
-        factories = ali1688_data.get('factories', [])
-        if factories and factories[0].get('products'):
-            ali1688_price = factories[0]['products'][0].get('price', 0)
-        else:
-            ali1688_price = ali1688_data.get('wholesale_price', {}).get('recommended_price', 0)
+        price_calc = ali1688_data.get('price_for_calculator', {})
+        ali1688_price = price_calc.get('ali1688_price')
+        if ali1688_price is None:
+            factories = ali1688_data.get('factories', [])
+            if factories and factories[0].get('products'):
+                p0 = factories[0]['products'][0]
+                ali1688_price = p0.get('starting_price')
+                if ali1688_price is None and p0.get('price_tiers'):
+                    tiers = p0['price_tiers']
+                    ali1688_price = tiers[-1].get('price', 0) if tiers else 0
+            if ali1688_price is None:
+                ali1688_price = ali1688_data.get('wholesale_price', {}).get('recommended_price', 0)
+        if ali1688_price is None:
+            ali1688_price = 0
         
         pricing_args = [
             '--temu-price', str(king_price),
@@ -416,7 +444,7 @@ async def generate_report(request: Request):
         except json.JSONDecodeError:
             continue
         
-        if pricing_data.get('decision', {}).get('status') in ['GO', 'STRONG GO']:
+        if pricing_data.get('decision', {}).get('status') in ('GO', 'STRONG_GO'):
             go_products.append({
                 'amazon': product,
                 'temu': temu_data,

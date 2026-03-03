@@ -411,10 +411,12 @@ class TemuCompetitorScraper:
             "automotive": {"min": 16.99, "max": 44.99},
             "pet-supplies": {"min": 10.99, "max": 28.99}
         }
-        
+        # 按关键词引入价格差异，避免不同产品得到相同卷王价
+        kw_seed = (hash(keyword.strip().lower()) % 10000) / 10000.0
+        price_offset = 2.0 + kw_seed * 8.0
         mock_products = []
         for i in range(limit):
-            base_price = 19.99 + (i * 3)
+            base_price = 19.99 + (i * 3) + (price_offset * (i % 3 + 1) * 0.5)
             discount = f"{40 + (i % 20)}% off"
             mock_products.append({
                 "title": f"Product {keyword} #{i+1}",

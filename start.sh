@@ -74,27 +74,53 @@ install_skills() {
     echo -e "${BLUE}→ 检查 Skills 安装状态...${NC}"
     
     SKILLS_DIR="$HOME/.claude/skills"
+    PROJECT_SKILLS_LOCK="$SCRIPT_DIR/skills-lock.json"
     
-    REQUIRED_SKILLS=(
-        "temu-pricing-calculator"
-        "amazon-movers-shakers"
-        "temu-competitor-search"
-        "ali1688-sourcing"
-        "ecom-product-orchestrator"
-    )
+    if [ -f "$PROJECT_SKILLS_LOCK" ]; then
+        print_step "找到项目 skills-lock.json"
+        
+        REQUIRED_SKILLS=()
+        while IFS= read -r line; do
+            if [[ $line =~ ^[[:space:]]*\"([^\"]+)\":[[:space:]]*\{ ]]; then
+                skill_name="${BASH_REMATCH[1]}"
+                REQUIRED_SKILLS+=("$skill_name")
+            fi
+        done < "$PROJECT_SKILLS_LOCK"
+        
+        if [ ${#REQUIRED_SKILLS[@]} -eq 0 ]; then
+            REQUIRED_SKILLS=(
+                "temu-pricing-calculator"
+                "amazon-movers-shakers"
+                "temu-competitor-search"
+                "ali1688-sourcing"
+                "ecom-product-orchestrator"
+            )
+        fi
+    else
+        REQUIRED_SKILLS=(
+            "temu-pricing-calculator"
+            "amazon-movers-shakers"
+            "temu-competitor-search"
+            "ali1688-sourcing"
+            "ecom-product-orchestrator"
+        )
+    fi
     
     MISSING_SKILLS=()
+    ALL_INSTALLED=true
     
     for skill in "${REQUIRED_SKILLS[@]}"; do
         if [ -d "$SKILLS_DIR/$skill" ]; then
             print_step "已安装: $skill"
         else
+            print_warning "未安装: $skill"
             MISSING_SKILLS+=("$skill")
+            ALL_INSTALLED=false
         fi
     done
     
-    if [ ${#MISSING_SKILLS[@]} -eq 0 ]; then
-        print_step "所有 Skills 已安装"
+    if [ "$ALL_INSTALLED" = true ]; then
+        print_step "所有 Skills 已安装，跳过安装步骤"
         return 0
     fi
     

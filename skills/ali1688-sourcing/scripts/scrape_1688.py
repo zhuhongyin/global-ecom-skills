@@ -644,6 +644,9 @@ class Ali1688Scraper:
                 ]
             },
         ]
+        # 按关键词引入拿货价差异，避免不同产品得到相同 1688 价
+        kw_seed = (hash(keyword.strip().lower()) % 1000) / 100.0
+        price_offset = (kw_seed * 0.8) - 2.0
         
         factories = []
         all_prices = []
@@ -652,7 +655,8 @@ class Ali1688Scraper:
             products = []
             for mock_product in mock_factory["products"]:
                 price_tiers = [PriceTier(**pt) for pt in mock_product["price_tiers"]]
-                starting_price = price_tiers[-1].price if price_tiers else 100.0
+                base_starting = price_tiers[-1].price if price_tiers else 100.0
+                starting_price = max(3.0, round(base_starting + price_offset * (rank % 4 + 1), 2))
                 
                 product = Product(
                     product_id=f"1688_{hash(mock_product['title']) % 1000000}",
